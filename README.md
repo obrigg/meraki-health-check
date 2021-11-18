@@ -1,5 +1,6 @@
 # Meraki Health Check 
 <img src="img/health_check.png">
+
 ### The Challenge
 
 Cisco Meraki is an amazing cloud-managed IT solution, simplying network, security, security cameras and IoT infrastructure.
