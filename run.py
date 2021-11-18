@@ -9,9 +9,10 @@ from rich import print as pp
 from rich.console import Console
 from rich.table import Table
 from openpyxl import Workbook
+from openpyxl.styles import Font, Color
 
 
-def select_org() -> str:
+def select_org():
     # Fetch and select the organization
     print('\n\nFetching organizations...\n')
     organizations = dashboard.organizations.getOrganizations()
@@ -36,7 +37,7 @@ def select_org() -> str:
                 print('\t[bold red]Invalid Organization Number\n')
         except:
             print('\t[bold red]Invalid Organization Number\n')
-    return(organizations[int(selected)]['id'])
+    return(organizations[int(selected)]['id'], organizations[int(selected)]['name'])
 
 
 def check_wifi_channel_utilization(network_id: str) -> dict:
@@ -98,48 +99,147 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
         # Check min TX power
         if rf_profile['fiveGhzSettings']['minPower'] > thresholds['5G Min TX Power']:
             pp(f"[bold red]The min TX power is too high at {rf_profile['fiveGhzSettings']['minPower']}dBm (not including antenna gain) for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['min_power'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['minPower']}
+            result[rf_profile['name']]['tests']['min_power'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['minPower']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
         else:
             pp(f"[green]The min TX power is {rf_profile['fiveGhzSettings']['minPower']}dBm for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['min_power'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['minPower']}
+            result[rf_profile['name']]['tests']['min_power'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['minPower']}
         
         # Check min bitrate
         if rf_profile['fiveGhzSettings']['minBitrate'] < thresholds['5G Min Bitrate']:
             pp(f"[bold red]The min bitrate is {rf_profile['fiveGhzSettings']['minBitrate']}Mbps for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['min_bitrate'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['minBitrate']}
+            result[rf_profile['name']]['tests']['min_bitrate'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['minBitrate']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
         else:
             pp(f"[green]The min bitrate is {rf_profile['fiveGhzSettings']['minBitrate']}Mbps for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['min_bitrate'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['minBitrate']}
+            result[rf_profile['name']]['tests']['min_bitrate'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['minBitrate']}
         
         # Check channel width
         if rf_profile['fiveGhzSettings']['channelWidth'] == "auto":
             pp(f"[bold red]The channel width is {rf_profile['fiveGhzSettings']['channelWidth']} for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['channel_width'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
+            result[rf_profile['name']]['tests']['channel_width'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
         elif int(rf_profile['fiveGhzSettings']['channelWidth']) > thresholds['5G Max Channel Width']:
             pp(f"[bold red]The channel width is {rf_profile['fiveGhzSettings']['channelWidth']}MHz for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['channel_width'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
+            result[rf_profile['name']]['tests']['channel_width'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
         else:
             pp(f"[green]The channel width is {rf_profile['fiveGhzSettings']['channelWidth']}MHz for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['channel_width'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
+            result[rf_profile['name']]['tests']['channel_width'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
         
         # Check if rx-sop is confiugred
         if rf_profile['fiveGhzSettings']['rxsop'] != None:
             pp(f"[red]RX-SOP is configured for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['rxsop'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['rxsop']}
+            result[rf_profile['name']]['tests']['rxsop'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['rxsop']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
         else:
             pp(f"[green]RX-SOP is not configured for RF profile {rf_profile['name']}")
-            result[rf_profile['name']]['rxsop'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['rxsop']}
+            result[rf_profile['name']]['tests']['rxsop'] = {'is_ok': True, 'value': rf_profile['fiveGhzSettings']['rxsop']}
     return (result)
+
+
+def generate_excel_report(results: dict) -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    #
+    # Summary tab
+    sheet.title = "Summary"
+    sheet["A1"] = "Organization Name"
+    sheet["B1"] = "Network Name"
+    sheet["C1"] = "Test Name"
+    sheet["D1"] = "Test Result"
+    line = 2
+    #
+    for network in results:
+        for test_name in results[network]:
+            sheet[f"A{line}"] = org_name
+            sheet[f"B{line}"] = network
+            sheet[f"C{line}"] = test_name
+            if results[network][test_name]['is_ok']:
+                sheet[f"D{line}"] = "Pass"
+            else:
+                sheet[f"D{line}"] = "Fail"
+                sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
+            line += 1
+    #
+    # Channel Utilization tab
+    workbook.create_sheet("Channel Utilization")
+    sheet = workbook["Channel Utilization"]
+    sheet["A1"] = "Organization Name"
+    sheet["B1"] = "Network Name"
+    sheet["C1"] = "AP Serial"
+    sheet["D1"] = "Result"
+    sheet["E1"] = "Utilization"
+    line = 2
+    #
+    for network in results:
+        if "channel_utilization_check" in results[network].keys():
+            for ap in results[network]['channel_utilization_check']:
+                if ap == "is_ok":   # skipping the is_ok key
+                    continue
+                sheet[f"A{line}"] = org_name
+                sheet[f"B{line}"] = network
+                sheet[f"C{line}"] = ap
+                if results[network]['channel_utilization_check'][ap]['is_ok']:
+                    sheet[f"D{line}"] = "Pass"
+                else:
+                    sheet[f"D{line}"] = "Fail"
+                    sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
+                    sheet[f"E{line}"].font = Font(bold=True, color="00FF0000")
+                sheet[f"E{line}"] = results[network]['channel_utilization_check'][ap]['utilization']
+                line += 1
+    #
+    # RF Profile tab
+    workbook.create_sheet("RF Profiles")
+    sheet = workbook["RF Profiles"]
+    sheet["A1"] = "Organization Name"
+    sheet["B1"] = "Network Name"
+    sheet["C1"] = "RF Profile"
+    sheet["D1"] = "Result"
+    sheet["E1"] = "Minimum TX Power"
+    sheet["F1"] = "Minimum Bit Rate"
+    sheet["G1"] = "Channel Width"
+    sheet["H1"] = "RX-SOP"
+    line = 2
+    #
+    for network in results:
+        if "rf_profiles_check" in results[network].keys():
+            for profile in results[network]['rf_profiles_check']:
+                pp(profile)
+                if profile == "is_ok":  # skipping the is_ok key
+                    continue
+                sheet[f"A{line}"] = org_name
+                sheet[f"B{line}"] = network
+                sheet[f"C{line}"] = profile
+                if results[network]['rf_profiles_check'][profile]['is_ok']:
+                    sheet[f"D{line}"] = "Pass"
+                else:
+                    sheet[f"D{line}"] = "Fail"
+                    sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
+                    sheet[f"E{line}"] = results[network]['rf_profiles_check'][profile]['tests']['min_power']['value']
+                    if results[network]['rf_profiles_check'][profile]['tests']['min_power']['is_ok'] == False:
+                        sheet[f"E{line}"].font = Font(bold=True, color="00FF0000")
+                    #
+                    sheet[f"F{line}"] = results[network]['rf_profiles_check'][profile]['tests']['min_bitrate']['value']
+                    if results[network]['rf_profiles_check'][profile]['tests']['min_bitrate']['is_ok'] == False:
+                        sheet[f"F{line}"].font = Font(bold=True, color="00FF0000")
+                    #
+                    sheet[f"G{line}"] = results[network]['rf_profiles_check'][profile]['tests']['channel_width']['value']
+                    if results[network]['rf_profiles_check'][profile]['tests']['channel_width']['is_ok'] == False:
+                        sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
+                    #
+                    sheet[f"H{line}"] = results[network]['rf_profiles_check'][profile]['tests']['rxsop']['value']
+                    if results[network]['rf_profiles_check'][profile]['tests']['rxsop']['is_ok'] == False:
+                        sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
+                line += 1
+    #
+    workbook.save(filename=f"{org_name}.xlsx")
+
 
 if __name__ == '__main__':
     # Thresholds
@@ -152,7 +252,7 @@ if __name__ == '__main__':
 
     # Initializing Meraki SDK
     dashboard = meraki.DashboardAPI()
-    org_id = select_org()
+    org_id, org_name = select_org()
     results = {}
     
     # Get networks
@@ -180,9 +280,10 @@ if __name__ == '__main__':
     pp(3*"\n", 100*"*", 3*"\n")
     
     # Results cleanup
+    clean_results = {}
     for result in results:
-        if results[result] == {}:
-            del results[result]
+        if results[result] != {}:
+            clean_results[result] = results[result]
 
-    # TODO: generate a report out of the results
-    pp(results)
+    pp(clean_results)
+    generate_excel_report(clean_results)
