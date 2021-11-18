@@ -251,7 +251,7 @@ if __name__ == '__main__':
     }
 
     # Initializing Meraki SDK
-    dashboard = meraki.DashboardAPI()
+    dashboard = meraki.DashboardAPI(output_log=False)
     org_id, org_name = select_org()
     results = {}
     
