@@ -99,10 +99,8 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
 
     it will return a dictionary with the result for each AP.
     e.g. {
-    'Q2KD-XXXX-XXXX': {'result': 'FAIL', 'utilization': 51.66},
-    'Q2KD-XXXX-XXXX': {'result': 'FAIL', 'utilization': 56.69},
-    'Q2KD-XXXX-XXXX': {'result': 'PASS', 'utilization': 16.93},
-    'Q2KD-XXXX-XXXX': {'result': 'FAIL', 'utilization': 59.48}
+    'RF Profile 1': {'result': 'FAIL', 'min_power': 30, 'min_bitrate': 12, 'channel_width': '80', 'rxsop': None},
+    'RF Profile 2': {'result': 'FAIL', 'min_power': 2, 'min_bitrate': 12, 'channel_width': 'auto', 'rxsop': None}
     }
 
     """
@@ -155,12 +153,18 @@ if __name__ == '__main__':
     dashboard = meraki.DashboardAPI()
     network_id = select_network()
     results = {}
-
+    
     # Wireless checks
-        results['channel_utilization_check'] = check_wifi_channel_utilization(network_id, 20)
-
+    pp(3*"\n", 100*"*", 3*"\n")
+    results['channel_utilization_check'] = check_wifi_channel_utilization(network_id, 20)
+    pp(3*"\n", 100*"*", 3*"\n")
+    results['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
+    pp(3*"\n", 100*"*", 3*"\n")
+        # TODO: wireless health
     # Wired checks
+        # TODO: check for CRCs
+        # TODO: check for broadcasts/multicasts
+        # TODO: check for large broadcast domains / number of clients on a Vlan
 
-
-
-
+    pp(3*"\n", 100*"*", 3*"\n")
+    pp(results)
