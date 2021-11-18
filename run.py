@@ -272,7 +272,7 @@ if __name__ == '__main__':
         if "switch" in network['productTypes']:
             # Wired checks
 
-            # TODO: check for CRC errors
+            # TODO: check for CRC errors (https://developer.cisco.com/meraki/api-v1/#!get-device-switch-ports-statuses-packets)
             # TODO: check for high broadcasts/multicasts rates, especially towards APs
             # TODO: check for large broadcast domains / number of clients on a Vlan
             pass
