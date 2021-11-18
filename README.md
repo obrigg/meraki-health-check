@@ -12,11 +12,11 @@ This script will leverage the Meraki API to compare an organization's settings a
 
 #### Example output
 Summary tab:
-<p align="center"><img src="img/Summary.png"></p>
+<p align="center"><img src="img/summary.png"></p>
 Channel utilization tab:
-<p align="center"><img src="img/RF utilization.png"></p>
+<p align="center"><img src="img/rf_utilization.png"></p>
 RF Profile tab:
-<p align="center"><img src="img/RF profile.png"></p>
+<p align="center"><img src="img/rf_profile.png"></p>
 
 ### How to run the script:
 
