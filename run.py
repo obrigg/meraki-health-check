@@ -145,13 +145,14 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
 
 def check_switch_port_counters(network_id: str) -> dict:
     """
-    This fuction checks the RF profiles for a given network. 
+    This fuction checks the port counters for all switches in a given network. 
 
-    it will return a dictionary with the result for each AP.
+    it will return a dictionary with the result for each switch.
     e.g. {
     'is_ok': False,
-    'RF Profile 1': {'is_ok': False, 'min_power': 30, 'min_bitrate': 12, 'channel_width': '80', 'rxsop': None},
-    'RF Profile 2': {'is_ok': True, 'min_power': 2, 'min_bitrate': 12, 'channel_width': 'auto', 'rxsop': None}
+    'Switch 1': {'is_ok': False, 'crc': ['3'], 'collision': [], 'broadcast': ['17', '18', '19', '20', '27'], 'multicast': [], 'topology_changes': []},
+    'Switch 2': {'is_ok': False, 'crc': [], 'collision': ['5'], 'broadcast': ['1', '14', '49'], 'multicast': [], 'topology_changes': []},
+    'Switch 3': {'is_ok': True, 'crc': [], 'collision': [], 'broadcast': [], 'multicast': [], 'topology_changes': []},
     }
 
     """
@@ -193,6 +194,18 @@ def check_switch_port_counters(network_id: str) -> dict:
                         result['is_ok'] = False
     return(result)
 
+
+def check_switch_stp(network_id: str) -> bool:
+    """
+    This fuction checks the STP status for a given network. 
+    """
+    stp_status = dashboard.networks.getNetworkStpStatus(network_id)
+    if stp_status['rstpEnabled']:
+        pp(f"[green]STP is enabled for network {network_id}")
+        return(True)
+    else:
+        pp(f"[red]STP is disabled for network {network_id}")
+        return(False)
 
 def generate_excel_report(results: dict) -> None:
     workbook = Workbook()
@@ -315,19 +328,21 @@ if __name__ == '__main__':
         network_id = network['id']
         results[network['name']] = {}
         if "wireless" in network['productTypes']:
-                # Wireless checks
-                pp(3*"\n", 100*"*", 3*"\n")
-                results[network['name']]['channel_utilization_check'] = check_wifi_channel_utilization(network_id)
-                pp(3*"\n", 100*"*", 3*"\n")
-                results[network['name']]['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
-                pp(3*"\n", 100*"*", 3*"\n")
-                # TODO: wireless health
+            # Wireless checks
+            pp(3*"\n", 100*"*", 3*"\n")
+            results[network['name']]['channel_utilization_check'] = check_wifi_channel_utilization(network_id)
+            pp(3*"\n", 100*"*", 3*"\n")
+            results[network['name']]['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
+            pp(3*"\n", 100*"*", 3*"\n")
+            # TODO: wireless health
         
         if "switch" in network['productTypes']:
             # Wired checks
-
-            # TODO: check for CRC errors (https://developer.cisco.com/meraki/api-v1/#!get-device-switch-ports-statuses-packets)
-            # TODO: check for high broadcasts/multicasts rates, especially towards APs
+            pp(3*"\n", 100*"*", 3*"\n")
+            results[network['name']]['port_counters_check'] = check_switch_port_counters(network_id)
+            pp(3*"\n", 100*"*", 3*"\n")
+            results[network['name']]['stp_check'] = check_switch_stp(network_id)
+            
             # TODO: check for large broadcast domains / number of clients on a Vlan
             pass
 
