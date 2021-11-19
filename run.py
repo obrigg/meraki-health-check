@@ -143,6 +143,57 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
     return (result)
 
 
+def check_switch_port_counters(network_id: str) -> dict:
+    """
+    This fuction checks the RF profiles for a given network. 
+
+    it will return a dictionary with the result for each AP.
+    e.g. {
+    'is_ok': False,
+    'RF Profile 1': {'is_ok': False, 'min_power': 30, 'min_bitrate': 12, 'channel_width': '80', 'rxsop': None},
+    'RF Profile 2': {'is_ok': True, 'min_power': 2, 'min_bitrate': 12, 'channel_width': 'auto', 'rxsop': None}
+    }
+
+    """
+    result = {'is_ok': True}
+    device_list = dashboard.networks.getNetworkDevices(network_id)
+    for device in device_list:
+        if "MS" in device['model']:
+            result[device['name']] = {'is_ok': True, 'crc': [], 'collision': [], 'broadcast': [], 'multicast': [], 'topology_changes': []}
+            switch_counters = dashboard.switch.getDeviceSwitchPortsStatusesPackets(device['serial'])
+            for port in switch_counters:
+                for port_counter in port['packets']:
+                    # CRC and collision errors
+                    if port_counter['desc'] == "CRC align errors" and port_counter['total'] > 0:
+                        pp(f"[bold red]{port_counter['total']} CRC errors on switch {device['name']} - port {port['portId']}")
+                        result[device['name']]['crc'].append(port['portId'])
+                        result[device['name']]['is_ok'] = False
+                        result['is_ok'] = False
+                    elif port_counter['desc'] == "Collisions" and port_counter['total'] > 0:
+                        pp(f"[bold red]{port_counter['total']} collisions on switch {device['name']} - port {port['portId']}")
+                        result[device['name']]['collision'].append(port['portId'])
+                        result[device['name']]['is_ok'] = False
+                        result['is_ok'] = False
+                    # Broadcast and Multicast rates
+                    elif port_counter['desc'] == "Broadcast" and port_counter['ratePerSec']['total'] > thresholds['broadcast_rate']:
+                        pp(f"[bold red]{port_counter['ratePerSec']['total']} broadcast/s on switch {device['name']} - port {port['portId']}")
+                        result[device['name']]['broadcast'].append(port['portId'])
+                        result[device['name']]['is_ok'] = False
+                        result['is_ok'] = False
+                    elif port_counter['desc'] == "Multicast" and port_counter['ratePerSec']['total'] > thresholds['multicast_rate']:
+                        pp(f"[bold red]{port_counter['ratePerSec']['total']} multicast/s on switch {device['name']} - port {port['portId']}")
+                        result[device['name']]['multicast'].append(port['portId'])
+                        result[device['name']]['is_ok'] = False
+                        result['is_ok'] = False
+                    # Topology changes
+                    elif port_counter['desc'] == "Topology changes" and port_counter['total'] > thresholds['topology_changes']:
+                        pp(f"[bold red]{port_counter['total']} topology changes on switch {device['name']} - port {port['portId']}")
+                        result[device['name']]['topology_changes'].append(port['portId'])
+                        result[device['name']]['is_ok'] = False
+                        result['is_ok'] = False
+    return(result)
+
+
 def generate_excel_report(results: dict) -> None:
     workbook = Workbook()
     sheet = workbook.active
@@ -244,10 +295,13 @@ def generate_excel_report(results: dict) -> None:
 if __name__ == '__main__':
     # Thresholds
     thresholds = {
-        '5G Channel Utilization': 20,
-        '5G Min TX Power': 10,
-        '5G Min Bitrate': 12,
-        '5G Max Channel Width': 40
+        '5G Channel Utilization': 20,   # %
+        '5G Min TX Power': 10,          # dBm
+        '5G Min Bitrate': 12,           # Mbps
+        '5G Max Channel Width': 40,     # MHz
+        'broadcast_rate': 100,           # pps
+        'multicast_rate': 100,            # pps
+        'topology_changes': 10
     }
 
     # Initializing Meraki SDK
