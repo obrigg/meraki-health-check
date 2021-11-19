@@ -23,20 +23,20 @@ RF Profile tab:
 #### Wireless checks
 1. Channel utilization (for 5GHz only, 2.4GHz is beyond saving...)
 2. RF Profile check:
-    2a. Configured Minimum Tx power (usually mistaken with EIRP, resulting to too high Tx power).
-    2b. Configured minimum Bitrate.
-    2c. Configured channel Width
-    2d. Manually configured RX-SOP (most won't configure it right, and it's better left at "auto").
+    * Configured Minimum Tx power (usually mistaken with EIRP, resulting to too high Tx power).
+    * Configured minimum Bitrate.
+    * Configured channel Width
+    * Manually configured RX-SOP (most won't configure it right, and it's better left at "auto").
 
 #### Switching checks
 1. Are jumbo-frames enabled (checking the MTU)?
 2. Is RSTP enabled? (best of luck handling loops without it..)
 3. Port counters:
-    3a. CRC errors.
-    3b. Collisions.
-    3c. Broadcasts exceeding threshold.
-    3d. Multicasts exceeding threshold.
-    3e. Topology changes (TCNs) exceeding threshold.
+    * CRC errors.
+    * Collisions.
+    * Broadcasts exceeding threshold.
+    * Multicasts exceeding threshold.
+    * Topology changes (TCNs) exceeding threshold.
 ---
 Convinced the health-check is worth 5 minutes of your time? let's do this!
 ### How to run the script:
