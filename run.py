@@ -160,6 +160,8 @@ def check_switch_port_counters(network_id: str) -> dict:
     device_list = dashboard.networks.getNetworkDevices(network_id)
     for device in device_list:
         if "MS" in device['model']:
+            if "name" not in device.keys():
+                device["name"] = device["serial"]
             result[device['name']] = {'is_ok': True, 'crc': [], 'collision': [], 'broadcast': [], 'multicast': [], 'topology_changes': []}
             switch_counters = dashboard.switch.getDeviceSwitchPortsStatusesPackets(device['serial'])
             for port in switch_counters:
@@ -195,17 +197,45 @@ def check_switch_port_counters(network_id: str) -> dict:
     return(result)
 
 
-def check_switch_stp(network_id: str) -> bool:
+def check_switch_stp(network_id: str) -> dict:
     """
     This fuction checks the STP status for a given network. 
     """
-    stp_status = dashboard.networks.getNetworkStpStatus(network_id)
+    stp_status = dashboard.switch.getNetworkSwitchStp(network_id)
     if stp_status['rstpEnabled']:
         pp(f"[green]STP is enabled for network {network_id}")
-        return(True)
+        return({'is_ok': True})
     else:
         pp(f"[red]STP is disabled for network {network_id}")
-        return(False)
+        return({'is_ok': False})
+
+
+def check_switch_mtu(network_id: str) -> dict:
+    """
+    This fuction checks the MTU of a given network. 
+    """
+    mtu = dashboard.switch.getNetworkSwitchMtu(network_id)
+    if mtu['defaultMtuSize'] > 9100 or mtu['overrides'] == []:
+        pp(f"[green]Jumbo Frames enabled for network {network_id} (MTU: {mtu['defaultMtuSize']})")
+        return({'is_ok': True})
+    else:
+        pp(f"[red]Jumbo Frames disabled for network {network_id} (MTU: {mtu['defaultMtuSize']}).\
+            \nIt's recommended to keep at default of 9578 unless intermediate devices don’t support jumbo frames")
+        return({'is_ok': False})
+
+
+def check_switch_storm_control(network_id: str) -> dict:
+    """
+    This fuction checks the storm control settings of a given network. 
+    """
+    storm_control = dashboard.switch.getNetworkSwitchStormControl(network_id)
+    if storm_control['broadcastThreshold'] < 100 and storm_control['multicastThreshold'] < 100 and storm_control['unknownUnicastThreshold'] < 100:
+        pp(f"[green]Storm-control is enabled for network {network_id}.")
+        return({'is_ok': True})
+    else:
+        pp(f"[magenta]Storm-control is disabled for network {network_id}. Best practices suggest a limit should be configured.")
+        return({'is_ok': False})
+
 
 def generate_excel_report(results: dict) -> None:
     workbook = Workbook()
@@ -274,7 +304,6 @@ def generate_excel_report(results: dict) -> None:
     for network in results:
         if "rf_profiles_check" in results[network].keys():
             for profile in results[network]['rf_profiles_check']:
-                pp(profile)
                 if profile == "is_ok":  # skipping the is_ok key
                     continue
                 sheet[f"A{line}"] = org_name
@@ -318,7 +347,7 @@ if __name__ == '__main__':
     }
 
     # Initializing Meraki SDK
-    dashboard = meraki.DashboardAPI(output_log=False)
+    dashboard = meraki.DashboardAPI(output_log=False, suppress_logging=True)
     org_id, org_name = select_org()
     results = {}
     
@@ -327,27 +356,30 @@ if __name__ == '__main__':
     for network in networks:
         network_id = network['id']
         results[network['name']] = {}
+        pp("\n", 40*"*", f"   {network['name']}   ", 40*"*", "\n")
+
         if "wireless" in network['productTypes']:
             # Wireless checks
-            pp(3*"\n", 100*"*", 3*"\n")
-            results[network['name']]['channel_utilization_check'] = check_wifi_channel_utilization(network_id)
-            pp(3*"\n", 100*"*", 3*"\n")
+            try:
+                results[network['name']]['channel_utilization_check'] = check_wifi_channel_utilization(network_id)
+            except:
+                pp(f"[magenta]The network {network_id} does not support channel-utilization reporting\
+                    \nIt should probably be upgraded...")
             results[network['name']]['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
-            pp(3*"\n", 100*"*", 3*"\n")
             # TODO: wireless health
         
         if "switch" in network['productTypes']:
             # Wired checks
-            pp(3*"\n", 100*"*", 3*"\n")
             results[network['name']]['port_counters_check'] = check_switch_port_counters(network_id)
-            pp(3*"\n", 100*"*", 3*"\n")
             results[network['name']]['stp_check'] = check_switch_stp(network_id)
-            
+            results[network['name']]['mtu_check'] = check_switch_mtu(network_id)
+            try:
+                results[network['name']]['storm_control_check'] = check_switch_storm_control(network_id)
+            except:
+                pp(f"[magenta]The network {network_id} does not support storm-control")
             # TODO: check for large broadcast domains / number of clients on a Vlan
-            pass
-
-    pp(3*"\n", 100*"*", 3*"\n")
     
+    pp("\n", 100*"*", "\n")
     # Results cleanup
     clean_results = {}
     for result in results:
