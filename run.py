@@ -67,7 +67,7 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
             result[ap['serial']] = {'is_ok': False, 'utilization': max_util}
             result['is_ok'] = False
         elif max_util == 0:
-            print(f"AP {ap['serial']} does not have 5GHz enabled. Skipping...")
+            print(f"[magenta]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
         else:
             pp(f"[green]5G Channel Utilization reached {max_util}% - below {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
             result[ap['serial']] = {'is_ok': True, 'utilization': max_util}
@@ -331,6 +331,50 @@ def generate_excel_report(results: dict) -> None:
                         sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
     #
+    # Switch ports tab
+    workbook.create_sheet("Switch port counters")
+    sheet = workbook["Switch ports counters"]
+    sheet["A1"] = "Organization Name"
+    sheet["B1"] = "Network Name"
+    sheet["C1"] = "Switch"
+    sheet["D1"] = "Result"
+    sheet["E1"] = "Ports with CRC errors"
+    sheet["F1"] = "Ports with collisions"
+    sheet["G1"] = "Multicasts exceeding threshold"
+    sheet["H1"] = "Broadcasts exceeding threshold"
+    sheet["I1"] = "Topology changes exceeding threshold"
+    line = 2
+    #
+    for network in results:
+        if "port_counters_check" in results[network].keys():
+            for switch in results[network]['port_counters_check']:
+                if switch == "is_ok":   # skipping the is_ok key
+                    continue
+                sheet[f"A{line}"] = org_name
+                sheet[f"B{line}"] = network
+                sheet[f"C{line}"] = switch
+                if results[network]['port_counters_check'][switch]['is_ok']:
+                    sheet[f"D{line}"] = "Pass"
+                else:
+                    sheet[f"D{line}"] = "Fail"
+                    sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
+                if results[network]['port_counters_check'][switch]['crc'] != []:
+                    sheet[f"E{line}"] = results[network]['port_counters_check'][switch]['crc']
+                    sheet[f"E{line}"].font = Font(bold=True, color="00FF0000")
+                if results[network]['port_counters_check'][switch]['collisions'] != []:
+                    sheet[f"F{line}"] = results[network]['port_counters_check'][switch]['collisions']
+                    sheet[f"F{line}"].font = Font(bold=True, color="00FF0000")
+                if results[network]['port_counters_check'][switch]['multicast'] != []:
+                    sheet[f"G{line}"] = results[network]['port_counters_check'][switch]['multicast']
+                    sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
+                if results[network]['port_counters_check'][switch]['broadcast'] != []:
+                    sheet[f"H{line}"] = results[network]['port_counters_check'][switch]['broadcast']
+                    sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
+                if results[network]['port_counters_check'][switch]['topology'] != []:
+                    sheet[f"I{line}"] = results[network]['port_counters_check'][switch]['topology']
+                    sheet[f"I{line}"].font = Font(bold=True, color="00FF0000")
+                line += 1
+    #
     workbook.save(filename=f"{org_name}.xlsx")
 
 
@@ -363,7 +407,7 @@ if __name__ == '__main__':
             try:
                 results[network['name']]['channel_utilization_check'] = check_wifi_channel_utilization(network_id)
             except:
-                pp(f"[magenta]The network {network_id} does not support channel-utilization reporting\
+                pp(f"[magenta]The network {network_id} does not support channel-utilization reporting.\
                     \nIt should probably be upgraded...")
             results[network['name']]['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
             # TODO: wireless health
