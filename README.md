@@ -20,6 +20,8 @@ RF Profile tab:
 
 ---
 ### List of checks
+#### General checks
+1. Network heath alerts
 #### Wireless checks
 1. Channel utilization (for 5GHz only, 2.4GHz is beyond saving...)
 2. RF Profile check:
