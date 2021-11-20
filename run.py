@@ -165,6 +165,30 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
     return (result)
 
 
+def check_wifi_ssid_amount(network_id: str) -> dict:
+    """
+    This fuction checks the amount of SSIDs for a given network. 
+
+    e.g. {
+    'is_ok': False,
+    'amount': 5
+    }
+    """
+    result = {'is_ok': True}
+    ssid_list = dashboard.wireless.getNetworkWirelessSsids(network_id)
+    enabled_ssid_counter = 0
+    for ssid in ssid_list:
+        if ssid['enabled']:
+            enabled_ssid_counter += 1
+    result['ssid_amount'] = enabled_ssid_counter
+    if enabled_ssid_counter <= thresholds['ssid_amount']:
+        pp(f"[green]There are {enabled_ssid_counter} SSIDs enabled for network {network_id}")
+    else:
+        pp(f"[red]There are {enabled_ssid_counter} SSIDs enabled for network {network_id}")
+        result['is_ok'] = False
+    return (result)
+
+
 def check_switch_port_counters(network_id: str) -> dict:
     """
     This fuction checks the port counters for all switches in a given network. 
@@ -439,7 +463,8 @@ if __name__ == '__main__':
         '5G Max Channel Width': 40,     # MHz
         'broadcast_rate': 100,           # pps
         'multicast_rate': 100,            # pps
-        'topology_changes': 10
+        'topology_changes': 10,
+        'ssid_amount': 4
     }
 
     # Initializing Meraki SDK
@@ -452,8 +477,11 @@ if __name__ == '__main__':
     for network in networks:
         network_id = network['id']
         results[network['name']] = {}
-        pp(f"[bold magenta]\n{23*'*' : <30}   {network['name'] : ^20}   {30*'*' : >30}\n")
-
+        pp(f"[bold magenta]\n{80*'*'}")
+        pp(f"[bold magenta]{30*'*' : <30}{' ' : ^20}{30*'*' : >30}")
+        pp(f"[bold magenta]{30*'*' : <30}{network['name'] : ^20}{30*'*' : >30}")
+        pp(f"[bold magenta]{30*'*' : <30}{' ' : ^20}{30*'*' : >30}")
+        pp(f"[bold magenta]{80*'*'}\n")
         # General checks
         results[network['name']]['network_health_alerts'] = check_network_health_alerts(network_id)
         
@@ -464,6 +492,7 @@ if __name__ == '__main__':
             except:
                 pp(f"[yellow]The network {network_id} does not support channel-utilization reporting. It should probably be upgraded...")
             results[network['name']]['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
+            results[network['name']]['ssid_amount_check'] = check_wifi_ssid_amount(network_id)
             # TODO: wireless health
         
         if "switch" in network['productTypes']:
