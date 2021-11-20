@@ -17,6 +17,8 @@ Channel utilization tab:
 <p align="center"><img src="img/rf_utilization.png"></p>
 RF Profile tab:
 <p align="center"><img src="img/rf_profile.png"></p>
+Switchport counters tab:
+<p align="center"><img src="img/switch_port_counters.png"></p>
 
 ---
 ### List of checks
