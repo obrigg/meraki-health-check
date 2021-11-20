@@ -34,9 +34,9 @@ def select_org():
             if int(selected) in range(0,counter):
                 isOrgDone = True
             else:
-                print('\t[bold red]Invalid Organization Number\n')
+                print('\t[red]Invalid Organization Number\n')
         except:
-            print('\t[bold red]Invalid Organization Number\n')
+            print('\t[red]Invalid Organization Number\n')
     return(organizations[int(selected)]['id'], organizations[int(selected)]['name'])
 
 
@@ -52,6 +52,8 @@ def check_network_health_alerts(network_id: str) -> dict:
         result = {'is_ok': False, 'alert_list': []}
         pp(f"[red]Network alerts detected for network {network_id}")
         for alert in alerts:
+            del alert['scope']['devices'][0]['url']
+            del alert['scope']['devices'][0]['mac']
             result['alert_list'].append({'severity': alert['severity'], 'category': alert['category'], 'type': alert['type'], 'details': alert['scope']})
             pp(f"[red]Severity: {alert['severity']}\tCategory: {alert['category']}\tType: {alert['type']}")
         return(result)
@@ -80,7 +82,7 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
             if util['utilization'] > max_util:
                 max_util = util['utilization']
         if max_util > thresholds['5G Channel Utilization']:
-            pp(f"[bold red]5G Channel Utilization reached {max_util}% - above {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
+            pp(f"[red]5G Channel Utilization reached {max_util}% - above {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
             result[ap['serial']] = {'is_ok': False, 'utilization': max_util}
             result['is_ok'] = False
         elif max_util == 0:
@@ -115,7 +117,7 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
                                         }}
         # Check min TX power
         if rf_profile['fiveGhzSettings']['minPower'] > thresholds['5G Min TX Power']:
-            pp(f"[bold red]The min TX power is too high at {rf_profile['fiveGhzSettings']['minPower']}dBm (not including antenna gain) for RF profile {rf_profile['name']}")
+            pp(f"[red]The min TX power is too high at {rf_profile['fiveGhzSettings']['minPower']}dBm (not including antenna gain) for RF profile {rf_profile['name']}")
             result[rf_profile['name']]['tests']['min_power'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['minPower']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
@@ -125,7 +127,7 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
         
         # Check min bitrate
         if rf_profile['fiveGhzSettings']['minBitrate'] < thresholds['5G Min Bitrate']:
-            pp(f"[bold red]The min bitrate is {rf_profile['fiveGhzSettings']['minBitrate']}Mbps for RF profile {rf_profile['name']}")
+            pp(f"[red]The min bitrate is {rf_profile['fiveGhzSettings']['minBitrate']}Mbps for RF profile {rf_profile['name']}")
             result[rf_profile['name']]['tests']['min_bitrate'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['minBitrate']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
@@ -135,12 +137,12 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
         
         # Check channel width
         if rf_profile['fiveGhzSettings']['channelWidth'] == "auto":
-            pp(f"[bold red]The channel width is {rf_profile['fiveGhzSettings']['channelWidth']} for RF profile {rf_profile['name']}")
+            pp(f"[red]The channel width is {rf_profile['fiveGhzSettings']['channelWidth']} for RF profile {rf_profile['name']}")
             result[rf_profile['name']]['tests']['channel_width'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
         elif int(rf_profile['fiveGhzSettings']['channelWidth']) > thresholds['5G Max Channel Width']:
-            pp(f"[bold red]The channel width is {rf_profile['fiveGhzSettings']['channelWidth']}MHz for RF profile {rf_profile['name']}")
+            pp(f"[red]The channel width is {rf_profile['fiveGhzSettings']['channelWidth']}MHz for RF profile {rf_profile['name']}")
             result[rf_profile['name']]['tests']['channel_width'] = {'is_ok': False, 'value': rf_profile['fiveGhzSettings']['channelWidth']}
             result[rf_profile['name']]['is_ok'] = False
             result['is_ok'] = False
@@ -185,29 +187,29 @@ def check_switch_port_counters(network_id: str) -> dict:
                 for port_counter in port['packets']:
                     # CRC and collision errors
                     if port_counter['desc'] == "CRC align errors" and port_counter['total'] > 0:
-                        pp(f"[bold red]{port_counter['total']} CRC errors on switch {device['name']} - port {port['portId']}")
+                        pp(f"[red]{port_counter['total']} CRC errors on switch {device['name']} - port {port['portId']}")
                         result[device['name']]['crc'].append(port['portId'])
                         result[device['name']]['is_ok'] = False
                         result['is_ok'] = False
                     elif port_counter['desc'] == "Collisions" and port_counter['total'] > 0:
-                        pp(f"[bold red]{port_counter['total']} collisions on switch {device['name']} - port {port['portId']}")
+                        pp(f"[red]{port_counter['total']} collisions on switch {device['name']} - port {port['portId']}")
                         result[device['name']]['collision'].append(port['portId'])
                         result[device['name']]['is_ok'] = False
                         result['is_ok'] = False
                     # Broadcast and Multicast rates
                     elif port_counter['desc'] == "Broadcast" and port_counter['ratePerSec']['total'] > thresholds['broadcast_rate']:
-                        pp(f"[bold red]{port_counter['ratePerSec']['total']} broadcast/s on switch {device['name']} - port {port['portId']}")
+                        pp(f"[red]{port_counter['ratePerSec']['total']} broadcast/s on switch {device['name']} - port {port['portId']}")
                         result[device['name']]['broadcast'].append(port['portId'])
                         result[device['name']]['is_ok'] = False
                         result['is_ok'] = False
                     elif port_counter['desc'] == "Multicast" and port_counter['ratePerSec']['total'] > thresholds['multicast_rate']:
-                        pp(f"[bold red]{port_counter['ratePerSec']['total']} multicast/s on switch {device['name']} - port {port['portId']}")
+                        pp(f"[red]{port_counter['ratePerSec']['total']} multicast/s on switch {device['name']} - port {port['portId']}")
                         result[device['name']]['multicast'].append(port['portId'])
                         result[device['name']]['is_ok'] = False
                         result['is_ok'] = False
                     # Topology changes
                     elif port_counter['desc'] == "Topology changes" and port_counter['total'] > thresholds['topology_changes']:
-                        pp(f"[bold red]{port_counter['total']} topology changes on switch {device['name']} - port {port['portId']}")
+                        pp(f"[red]{port_counter['total']} topology changes on switch {device['name']} - port {port['portId']}")
                         result[device['name']]['topology_changes'].append(port['portId'])
                         result[device['name']]['is_ok'] = False
                         result['is_ok'] = False
@@ -300,6 +302,12 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"D{line}"] = alert['category']
                 sheet[f"E{line}"] = alert['type']
                 sheet[f"F{line}"] = str(alert['details'])
+                if alert['severity'] == "critical":
+                    for cell in sheet[line:line]:
+                        cell.font = Font(bold=True, color="00FF0000")
+                elif alert['severity'] == "warning":
+                    for cell in sheet[line:line]:
+                        cell.font = Font(bold=True, color="00FF9900")
                 line += 1   
     #
     # Channel Utilization tab
@@ -451,8 +459,7 @@ if __name__ == '__main__':
             try:
                 results[network['name']]['channel_utilization_check'] = check_wifi_channel_utilization(network_id)
             except:
-                pp(f"[yellow]The network {network_id} does not support channel-utilization reporting.\
-                    \nIt should probably be upgraded...")
+                pp(f"[yellow]The network {network_id} does not support channel-utilization reporting. It should probably be upgraded...")
             results[network['name']]['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
             # TODO: wireless health
         
