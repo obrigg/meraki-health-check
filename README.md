@@ -26,13 +26,14 @@ RF Profile tab:
 1. Channel utilization (for 5GHz only, 2.4GHz is beyond saving...)
 2. RF Profile check:
     * Configured Minimum Tx power (usually mistaken with EIRP, resulting to too high Tx power).
-    * Configured minimum Bitrate.
-    * Configured channel Width
+    * Configured minimum Bitrate (see [best practices](https://documentation.meraki.com/MR/WiFi_Basics_and_Best_Practices/Multi-SSID_Deployment_Considerations)).
+    * Configured channel Width.
     * Manually configured RX-SOP (most won't configure it right, and it's better left at "auto").
+    * Number of enabled SSIDs (see [best practices](https://documentation.meraki.com/MR/WiFi_Basics_and_Best_Practices/Multi-SSID_Deployment_Considerations)).
 
 #### Switching checks
-1. Are jumbo-frames enabled (checking the MTU)?
-2. Is RSTP enabled? (best of luck handling loops without it..)
+1. Are jumbo-frames enabled, by checking the MTU (see [best practices](https://documentation.meraki.com/Architectures_and_Best_Practices/Cisco_Meraki_Best_Practice_Design/Best_Practice_Design_-_MS_Switching/General_MS_Best_Practices)).
+2. Is RSTP enabled? (best of luck handling loops without it.. see [best practices](https://documentation.meraki.com/Architectures_and_Best_Practices/Cisco_Meraki_Best_Practice_Design/Best_Practice_Design_-_MS_Switching/General_MS_Best_Practices))
 3. Port counters:
     * CRC errors.
     * Collisions.
