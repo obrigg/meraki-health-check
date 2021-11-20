@@ -67,7 +67,7 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
             result[ap['serial']] = {'is_ok': False, 'utilization': max_util}
             result['is_ok'] = False
         elif max_util == 0:
-            print(f"[magenta]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
+            pp(f"[magenta]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
         else:
             pp(f"[green]5G Channel Utilization reached {max_util}% - below {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
             result[ap['serial']] = {'is_ok': True, 'utilization': max_util}
@@ -333,7 +333,7 @@ def generate_excel_report(results: dict) -> None:
     #
     # Switch ports tab
     workbook.create_sheet("Switch port counters")
-    sheet = workbook["Switch ports counters"]
+    sheet = workbook["Switch port counters"]
     sheet["A1"] = "Organization Name"
     sheet["B1"] = "Network Name"
     sheet["C1"] = "Switch"
@@ -359,19 +359,19 @@ def generate_excel_report(results: dict) -> None:
                     sheet[f"D{line}"] = "Fail"
                     sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
                 if results[network]['port_counters_check'][switch]['crc'] != []:
-                    sheet[f"E{line}"] = results[network]['port_counters_check'][switch]['crc']
+                    sheet[f"E{line}"] = str(results[network]['port_counters_check'][switch]['crc'])
                     sheet[f"E{line}"].font = Font(bold=True, color="00FF0000")
-                if results[network]['port_counters_check'][switch]['collisions'] != []:
-                    sheet[f"F{line}"] = results[network]['port_counters_check'][switch]['collisions']
+                if results[network]['port_counters_check'][switch]['collision'] != []:
+                    sheet[f"F{line}"] = str(results[network]['port_counters_check'][switch]['collision'])
                     sheet[f"F{line}"].font = Font(bold=True, color="00FF0000")
                 if results[network]['port_counters_check'][switch]['multicast'] != []:
-                    sheet[f"G{line}"] = results[network]['port_counters_check'][switch]['multicast']
+                    sheet[f"G{line}"] = str(results[network]['port_counters_check'][switch]['multicast'])
                     sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
                 if results[network]['port_counters_check'][switch]['broadcast'] != []:
-                    sheet[f"H{line}"] = results[network]['port_counters_check'][switch]['broadcast']
+                    sheet[f"H{line}"] = str(results[network]['port_counters_check'][switch]['broadcast'])
                     sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
-                if results[network]['port_counters_check'][switch]['topology'] != []:
-                    sheet[f"I{line}"] = results[network]['port_counters_check'][switch]['topology']
+                if results[network]['port_counters_check'][switch]['topology_changes'] != []:
+                    sheet[f"I{line}"] = str(results[network]['port_counters_check'][switch]['topology'])
                     sheet[f"I{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
     #
