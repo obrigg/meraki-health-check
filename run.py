@@ -40,6 +40,23 @@ def select_org():
     return(organizations[int(selected)]['id'], organizations[int(selected)]['name'])
 
 
+def check_network_health_alerts(network_id: str) -> dict:
+    """
+    This fuction checks the network health alerts for a given network. 
+    """
+    alerts = dashboard.networks.getNetworkHealthAlerts(network_id)
+    if len(alerts) == 0:
+        pp(f"[green]No network health alerts for network {network_id}")
+        return({'is_ok': True})
+    else:
+        result = {'is_ok': False, 'alert_list': []}
+        pp(f"[red]Network alerts detected for network {network_id}")
+        for alert in alerts:
+            result['alert_list'].append({'severity': alert['severity'], 'category': alert['category'], 'type': alert['type']})
+            pp(f"[red]Severity: {alert['severity']}\tCategory: {alert['category']}\tType: {alert['type']}")
+        return(result)
+
+
 def check_wifi_channel_utilization(network_id: str) -> dict:
     """
     This fuction checks the wifi channel utilization for a given network. 
@@ -67,7 +84,7 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
             result[ap['serial']] = {'is_ok': False, 'utilization': max_util}
             result['is_ok'] = False
         elif max_util == 0:
-            pp(f"[magenta]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
+            pp(f"[yellow]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
         else:
             pp(f"[green]5G Channel Utilization reached {max_util}% - below {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
             result[ap['serial']] = {'is_ok': True, 'utilization': max_util}
@@ -233,7 +250,7 @@ def check_switch_storm_control(network_id: str) -> dict:
         pp(f"[green]Storm-control is enabled for network {network_id}.")
         return({'is_ok': True})
     else:
-        pp(f"[magenta]Storm-control is disabled for network {network_id}. Best practices suggest a limit should be configured.")
+        pp(f"[yellow]Storm-control is disabled for network {network_id}. Best practices suggest a limit should be configured.")
         return({'is_ok': False})
 
 
@@ -260,6 +277,28 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"D{line}"] = "Fail"
                 sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
             line += 1
+    #
+    # Network Health Alerts tab
+    workbook.create_sheet("Network Health Alerts")
+    sheet = workbook["Network Health Alerts"]
+    sheet["A1"] = "Organization Name"
+    sheet["B1"] = "Network Name"
+    sheet["C1"] = "Severity"
+    sheet["D1"] = "Category"
+    sheet["E1"] = "Type"
+    line = 2
+    #
+    for network in results:
+        if results[network]['network_health_alerts']['is_ok'] == True:
+            pass
+        else:
+            for alert in results[network]['network_health_alerts']['alert_list']:
+                sheet[f"A{line}"] = org_name
+                sheet[f"B{line}"] = network
+                sheet[f"C{line}"] = alert['severity']
+                sheet[f"D{line}"] = alert['category']
+                sheet[f"E{line}"] = alert['type']
+                line += 1   
     #
     # Channel Utilization tab
     workbook.create_sheet("Channel Utilization")
@@ -400,14 +439,17 @@ if __name__ == '__main__':
     for network in networks:
         network_id = network['id']
         results[network['name']] = {}
-        pp("\n", 40*"*", f"   {network['name']}   ", 40*"*", "\n")
+        pp(f"[bold magenta]\n{23*'*' : <30}   {network['name'] : ^20}   {30*'*' : >30}\n")
 
+        # General checks
+        results[network['name']]['network_health_alerts'] = check_network_health_alerts(network_id)
+        
         if "wireless" in network['productTypes']:
             # Wireless checks
             try:
                 results[network['name']]['channel_utilization_check'] = check_wifi_channel_utilization(network_id)
             except:
-                pp(f"[magenta]The network {network_id} does not support channel-utilization reporting.\
+                pp(f"[yellow]The network {network_id} does not support channel-utilization reporting.\
                     \nIt should probably be upgraded...")
             results[network['name']]['rf_profiles_check'] = check_wifi_rf_profiles(network_id)
             # TODO: wireless health
@@ -420,7 +462,7 @@ if __name__ == '__main__':
             try:
                 results[network['name']]['storm_control_check'] = check_switch_storm_control(network_id)
             except:
-                pp(f"[magenta]The network {network_id} does not support storm-control")
+                pp(f"[yellow]The network {network_id} does not support storm-control")
             # TODO: check for large broadcast domains / number of clients on a Vlan
     
     pp("\n", 100*"*", "\n")
