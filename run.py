@@ -52,7 +52,7 @@ def check_network_health_alerts(network_id: str) -> dict:
         result = {'is_ok': False, 'alert_list': []}
         pp(f"[red]Network alerts detected for network {network_id}")
         for alert in alerts:
-            result['alert_list'].append({'severity': alert['severity'], 'category': alert['category'], 'type': alert['type']})
+            result['alert_list'].append({'severity': alert['severity'], 'category': alert['category'], 'type': alert['type'], 'details': alert['scope']})
             pp(f"[red]Severity: {alert['severity']}\tCategory: {alert['category']}\tType: {alert['type']}")
         return(result)
 
@@ -286,6 +286,7 @@ def generate_excel_report(results: dict) -> None:
     sheet["C1"] = "Severity"
     sheet["D1"] = "Category"
     sheet["E1"] = "Type"
+    sheet["F1"] = "Details"
     line = 2
     #
     for network in results:
@@ -298,6 +299,7 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"C{line}"] = alert['severity']
                 sheet[f"D{line}"] = alert['category']
                 sheet[f"E{line}"] = alert['type']
+                sheet[f"F{line}"] = str(alert['details'])
                 line += 1   
     #
     # Channel Utilization tab
