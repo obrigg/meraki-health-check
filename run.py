@@ -52,8 +52,11 @@ def check_network_health_alerts(network_id: str) -> dict:
         result = {'is_ok': False, 'alert_list': []}
         pp(f"[red]Network alerts detected for network {network_id}")
         for alert in alerts:
-            del alert['scope']['devices'][0]['url']
-            del alert['scope']['devices'][0]['mac']
+            try:
+                del alert['scope']['devices'][0]['url']
+                del alert['scope']['devices'][0]['mac']
+            except:
+                pass
             result['alert_list'].append({'severity': alert['severity'], 'category': alert['category'], 'type': alert['type'], 'details': alert['scope']})
             pp(f"[red]Severity: {alert['severity']}\tCategory: {alert['category']}\tType: {alert['type']}")
         return(result)
