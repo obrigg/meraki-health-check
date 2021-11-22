@@ -80,9 +80,7 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
     channel_utilization = dashboard.networks.getNetworkNetworkHealthChannelUtilization(network_id, perPage=100)
     # TODO: pagination
     for ap in channel_utilization:
-        utilization_list = []
-        for util in ap['wifi1']:
-            utilization_list.append(util['utilization'])
+        utilization_list = [ap['wifi1'][util]['utilization'] for util in range(len(ap['wifi1']))]
         exceeded_utilization_list = [utilization for utilization in utilization_list if utilization > thresholds['5G Channel Utilization']]
         if len(utilization_list) == 0:
             pp(f"[yellow]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
@@ -91,7 +89,7 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
             result[ap['serial']] = {'is_ok': False, 'utilization': max(utilization_list), 'occurances': len(exceeded_utilization_list)}
             result['is_ok'] = False
         else:
-            pp(f"[green]5G Channel did not exceed {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
+            pp(f"[green]5G Channel did not exceed {thresholds['5G Channel Utilization']}% for AP {ap['serial']}, max utilization was {max(utilization_list)}")
             result[ap['serial']] = {'is_ok': True, 'utilization': max(utilization_list), 'occurances': ''}
     return result
 
