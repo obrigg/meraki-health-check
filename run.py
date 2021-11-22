@@ -1,4 +1,4 @@
-__version__ = '0.1'
+__version__ = '0.3'
 __author__ = 'Oren Brigg'
 __author_email__ = 'obrigg@cisco.com'
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
@@ -70,29 +70,29 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
     it will return a dictionary with the result for each AP.
     e.g. {
     'is_ok': False,
-    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 51.66},
-    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 56.69},
-    'Q2KD-XXXX-XXXX': {'is_ok': True, 'utilization': 16.93},
-    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 59.48}
+    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 51.66, 'occurances': 3},
+    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 56.69, 'occurances': 17},
+    'Q2KD-XXXX-XXXX': {'is_ok': True, 'utilization': 16.93, 'occurances': 8},
+    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 59.48, 'occurances': 1}
     }
     """
     result = {'is_ok': True}
     channel_utilization = dashboard.networks.getNetworkNetworkHealthChannelUtilization(network_id, perPage=100)
     # TODO: pagination
     for ap in channel_utilization:
-        max_util = 0
+        utilization_list = []
         for util in ap['wifi1']:
-            if util['utilization'] > max_util:
-                max_util = util['utilization']
-        if max_util > thresholds['5G Channel Utilization']:
-            pp(f"[red]5G Channel Utilization reached {max_util}% - above {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
-            result[ap['serial']] = {'is_ok': False, 'utilization': max_util}
-            result['is_ok'] = False
-        elif max_util == 0:
+            utilization_list.append(util['utilization'])
+        exceeded_utilization_list = [utilization for utilization in utilization_list if utilization > thresholds['5G Channel Utilization']]
+        if len(utilization_list) == 0:
             pp(f"[yellow]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
+        elif len(exceeded_utilization_list) > 0:
+            pp(f"[red]5G Channel Utilization exceeded {thresholds['5G Channel Utilization']}% {len(exceeded_utilization_list)} times, with a peak of {max(utilization_list)}% for AP {ap['serial']}")
+            result[ap['serial']] = {'is_ok': False, 'utilization': max(utilization_list), 'occurances': len(exceeded_utilization_list)}
+            result['is_ok'] = False
         else:
-            pp(f"[green]5G Channel Utilization reached {max_util}% - below {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
-            result[ap['serial']] = {'is_ok': True, 'utilization': max_util}
+            pp(f"[green]5G Channel did not exceed {thresholds['5G Channel Utilization']}% for AP {ap['serial']}")
+            result[ap['serial']] = {'is_ok': True, 'utilization': max(utilization_list), 'occurances': ''}
     return result
 
 
@@ -344,7 +344,8 @@ def generate_excel_report(results: dict) -> None:
     sheet["B1"] = "Network Name"
     sheet["C1"] = "AP Serial"
     sheet["D1"] = "Result"
-    sheet["E1"] = "Utilization"
+    sheet["E1"] = "Max Utilization"
+    sheet["F1"] = "Occurances"
     line = 2
     #
     for network in results:
@@ -362,6 +363,7 @@ def generate_excel_report(results: dict) -> None:
                     sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
                     sheet[f"E{line}"].font = Font(bold=True, color="00FF0000")
                 sheet[f"E{line}"] = results[network]['channel_utilization_check'][ap]['utilization']
+                sheet[f"F{line}"] = results[network]['channel_utilization_check'][ap]['occurances']
                 line += 1
     #
     # RF Profile tab
@@ -477,11 +479,11 @@ if __name__ == '__main__':
     for network in networks:
         network_id = network['id']
         results[network['name']] = {}
-        pp(f"[bold magenta]\n{80*'*'}")
-        pp(f"[bold magenta]{30*'*' : <30}{' ' : ^20}{30*'*' : >30}")
-        pp(f"[bold magenta]{30*'*' : <30}{network['name'] : ^20}{30*'*' : >30}")
-        pp(f"[bold magenta]{30*'*' : <30}{' ' : ^20}{30*'*' : >30}")
-        pp(f"[bold magenta]{80*'*'}\n")
+        pp(f"[bold magenta]\n{90*'*'}")
+        pp(f"[bold magenta]{10*'*' : <30}{' ' : ^30}{10*'*' : >30}")
+        pp(f"[bold magenta]{10*'*' : <30}{network['name'] : ^30}{10*'*' : >30}")
+        pp(f"[bold magenta]{10*'*' : <30}{' ' : ^30}{10*'*' : >30}")
+        pp(f"[bold magenta]{90*'*'}\n")
         # General checks
         results[network['name']]['network_health_alerts'] = check_network_health_alerts(network_id)
         
