@@ -44,6 +44,7 @@ def check_network_health_alerts(network_id: str) -> dict:
     """
     This fuction checks the network health alerts for a given network. 
     """
+    print("\n\t\tChecking network health alerts...\n")
     alerts = dashboard.networks.getNetworkHealthAlerts(network_id)
     if len(alerts) == 0:
         pp(f"[green]No network health alerts for network {network_id}")
@@ -70,12 +71,13 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
     it will return a dictionary with the result for each AP.
     e.g. {
     'is_ok': False,
-    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 51.66, 'occurances': 3},
-    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 56.69, 'occurances': 17},
-    'Q2KD-XXXX-XXXX': {'is_ok': True, 'utilization': 16.93, 'occurances': 8},
-    'Q2KD-XXXX-XXXX': {'is_ok': False, 'utilization': 59.48, 'occurances': 1}
+    'Q2KD-XXXX-XXXX': {'is_ok': False, 'name': 'AP1', 'utilization': 51.66, 'occurances': 3},
+    'Q2KD-XXXX-XXXX': {'is_ok': False, 'name': 'AP2', 'utilization': 56.69, 'occurances': 17},
+    'Q2KD-XXXX-XXXX': {'is_ok': True, 'name': 'AP3', 'utilization': 16.93, 'occurances': 8},
+    'Q2KD-XXXX-XXXX': {'is_ok': False, 'name': 'AP4', 'utilization': 59.48, 'occurances': 1}
     }
     """
+    print("\n\t\tChecking wifi channel utilization...\n")
     result = {'is_ok': True}
     channel_utilization = dashboard.networks.getNetworkNetworkHealthChannelUtilization(network_id, perPage=100)
     # TODO: pagination
@@ -91,6 +93,12 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
         else:
             pp(f"[green]5G Channel did not exceed {thresholds['5G Channel Utilization']}% for AP {ap['serial']}, max utilization was {max(utilization_list)}")
             result[ap['serial']] = {'is_ok': True, 'utilization': max(utilization_list), 'occurances': ''}
+    # Adding AP names
+    network_devices = dashboard.networks.getNetworkDevices(network_id)
+    for device in network_devices:
+        if device['serial'] in result:
+            result[device['serial']]['name'] = device['name']
+    #
     return result
 
 
@@ -106,6 +114,7 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
     }
 
     """
+    print("\n\t\tChecking WiFi RF Profiles...\n")
     result = {'is_ok': True}
     rf_profiles = dashboard.wireless.getNetworkWirelessRfProfiles(network_id)
     for rf_profile in rf_profiles:
@@ -172,6 +181,7 @@ def check_wifi_ssid_amount(network_id: str) -> dict:
     'amount': 5
     }
     """
+    print("\n\t\tChecking WiFi SSID Amount...\n")
     result = {'is_ok': True}
     ssid_list = dashboard.wireless.getNetworkWirelessSsids(network_id)
     enabled_ssid_counter = 0
@@ -198,8 +208,8 @@ def check_switch_port_counters(network_id: str) -> dict:
     'Switch 2': {'is_ok': False, 'crc': [], 'collision': ['5'], 'broadcast': ['1', '14', '49'], 'multicast': [], 'topology_changes': []},
     'Switch 3': {'is_ok': True, 'crc': [], 'collision': [], 'broadcast': [], 'multicast': [], 'topology_changes': []},
     }
-
     """
+    print("\n\t\tChecking Switch Port Counters...\n")
     result = {'is_ok': True}
     device_list = dashboard.networks.getNetworkDevices(network_id)
     for device in device_list:
@@ -245,6 +255,7 @@ def check_switch_stp(network_id: str) -> dict:
     """
     This fuction checks the STP status for a given network. 
     """
+    print("\n\t\tChecking Switch STP Status...\n")
     stp_status = dashboard.switch.getNetworkSwitchStp(network_id)
     if stp_status['rstpEnabled']:
         pp(f"[green]STP is enabled for network {network_id}")
@@ -258,6 +269,7 @@ def check_switch_mtu(network_id: str) -> dict:
     """
     This fuction checks the MTU of a given network. 
     """
+    print("\n\t\tChecking Switch MTU...\n")
     mtu = dashboard.switch.getNetworkSwitchMtu(network_id)
     if mtu['defaultMtuSize'] > 9100 or mtu['overrides'] == []:
         pp(f"[green]Jumbo Frames enabled for network {network_id} (MTU: {mtu['defaultMtuSize']})")
@@ -272,6 +284,7 @@ def check_switch_storm_control(network_id: str) -> dict:
     """
     This fuction checks the storm control settings of a given network. 
     """
+    print("'n\t\tChecking Switch Storm Control...\n")
     storm_control = dashboard.switch.getNetworkSwitchStormControl(network_id)
     if storm_control['broadcastThreshold'] < 100 and storm_control['multicastThreshold'] < 100 and storm_control['unknownUnicastThreshold'] < 100:
         pp(f"[green]Storm-control is enabled for network {network_id}.")
@@ -282,6 +295,7 @@ def check_switch_storm_control(network_id: str) -> dict:
 
 
 def generate_excel_report(results: dict) -> None:
+    print("\n\t\tGenerating an Excel Report...\n")
     workbook = Workbook()
     sheet = workbook.active
     #
@@ -340,7 +354,7 @@ def generate_excel_report(results: dict) -> None:
     sheet = workbook["Channel Utilization"]
     sheet["A1"] = "Organization Name"
     sheet["B1"] = "Network Name"
-    sheet["C1"] = "AP Serial"
+    sheet["C1"] = "AP Name"
     sheet["D1"] = "Result"
     sheet["E1"] = "Max Utilization"
     sheet["F1"] = "Occurances"
@@ -353,7 +367,7 @@ def generate_excel_report(results: dict) -> None:
                     continue
                 sheet[f"A{line}"] = org_name
                 sheet[f"B{line}"] = network
-                sheet[f"C{line}"] = ap
+                sheet[f"C{line}"] = results[network]['channel_utilization_check'][ap]['name']
                 if results[network]['channel_utilization_check'][ap]['is_ok']:
                     sheet[f"D{line}"] = "Pass"
                 else:
@@ -447,7 +461,7 @@ def generate_excel_report(results: dict) -> None:
                     sheet[f"H{line}"] = str(results[network]['port_counters_check'][switch]['broadcast'])
                     sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
                 if results[network]['port_counters_check'][switch]['topology_changes'] != []:
-                    sheet[f"I{line}"] = str(results[network]['port_counters_check'][switch]['topology'])
+                    sheet[f"I{line}"] = str(results[network]['port_counters_check'][switch]['topology_changes'])
                     sheet[f"I{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
     #
