@@ -65,6 +65,10 @@ Now you're ready. Good luck!
 
 `python run.py`
 
+### Known limitations / caveats
+1. The script intentionally ignores the 2.4GHz spectrum, as it is beyond salavion. It can be altered, if needed, in the `check_wifi_channel_utilization` function.
+2. The Meraki API does not retrieve the default RF policies. A network using a default RF policy with altered values will not show up in the report.
+3. The SSID amount check counts every **enabled** SSIDs, even if the SSID is limited to certain APs or to a certain band. You may have three ssids on 2.4GHz and three different SSIDs on 5GHz, but the check will fail as it counts six SSIDs.
 ----
 ### Licensing info
 Copyright (c) 2021 Cisco and/or its affiliates.
