@@ -299,8 +299,40 @@ def generate_excel_report(results: dict) -> None:
     workbook = Workbook()
     sheet = workbook.active
     #
+    # Intro tab
+    sheet.title = "Introduction"
+    sheet["B3"] = "Introduction to the Meraki health check report"
+    sheet["B3"].font = Font(bold=True, size=36)
+    sheet["B5"] = "Cisco Meraki is an amazing cloud-managed IT solution, simplying network, security, security cameras and IoT infrastructure."
+    sheet["B6"] = "However, even the most intelligent AI/ML driven solution is still volunerable to users misconfiguring various options (usually without reading the documentation). "
+    sheet["B7"] = "Misconfiguration can result in an outage, or poor user experience (if you will limit user's traffic to 1Mbps - things will work slowly.. AI won't help there as it's the admin's 'intent')."
+    sheet["B9"] = "This report is presenting the alignment between your Meraki networks' state and configuration with Meraki best practices, "
+    sheet["B10"] = "and a set of thresholds I have selected based on my personal experience."
+    sheet["B12"] = "In the report you will find the following tabs:"
+    sheet["B13"] = "1. Summary - This tab presents a summary of the results of the health check."
+    sheet["B14"] = "2. Network Health Alerts - This tab presents the dashboard alerts from all networks in a single view."
+    sheet["B15"] = f"3. Network Health - This tab presents the Channel Utilization for every wireless AP. We will examine only the 5GHz spectrum; If you are using the 2.4GHz spectrum - it's beyond saving..."
+    sheet["C16"] = f"The threshold is set to {thresholds['5G Channel Utilization']}%. APs with a utilization above this threshold for many occurances (10+) may be experiencing RF issues."
+    sheet["B17"] = "4. RF profiles - This tab presents the (non-default) RF profiles for every network."
+    sheet["C18"] = f"Minimum Tx power: Setting the minimum Tx power too high, might result in wireless APs interefering with each other, as they are not allowed to decrease their power. The threshold is set to {thresholds['5G Min TX Power']} dBm."
+    sheet["C19"] = f"Minimum bitrate: Broadcasts and Multicasts will be sent over the wireless at this speed. The lower the speed - the more airtime is wasted. The threshold is set to {thresholds['5G Min Bitrate']} Mbps."
+    sheet["C20"] = f"Channel Width: Depending on local regulation and wireless AP density, there is a limited number of channels that can be used. In most deployments, channel width of more than {thresholds['5G Max Channel Width']}MHz might cause interferece between the wireless APs."
+    sheet["C21"] = f"RX-SOP: This is a fine tuning network design tool that should be used only after consulting an independent wireless expert or Meraki Support. If it's configured - there should be a good reason for it. More details at: https://documentation.meraki.com/MR/Radio_Settings/Receive_Start_of_Packet_(RX-SOP)"
+    sheet["B22"] = f"5. Switch port counters: This tab presents every switch in every network."
+    sheet["C23"] = f"Ports with CRC errors: We do not expect to see any CRC errors on our network, ports with more than 0 CRC errors will appear here."
+    sheet["C24"] = f"Ports with colissions: It's 2022.. we shouldn't be seeing hubs or collisions on our network. Ports with more than 0 collisions will appear here."
+    sheet["C25"] = f"Multicasts exceeding threshold: Multicast traffic may be legitimate, we're highlighting ports with more than {thresholds['multicast_rate']} multicasts per second for visibility (and making sure they are legitimate)."
+    sheet["C26"] = f"Broadcasts exceeding threshold: Broadcasts above a certain threshold should be looked at, we're highlighting ports with more than {thresholds['broadcast_rate']} broadcasts per second for visibility (and making sure they are legitimate)."
+    sheet["C27"] = f"Topology changes exceeding threshold: TCN means something has changed in the STP topology. We're highlighting ports with more than {thresholds['topology_changes']} topology changes for visibility (and making sure they are legitimate)."
+    #
+    # Increasing font size
+    for line in range(5, 30):
+        sheet[f"B{line}"].font = Font(size=16)
+        sheet[f"C{line}"].font = Font(size=16)
+    #
     # Summary tab
-    sheet.title = "Summary"
+    workbook.create_sheet("Summary")
+    sheet = workbook["Summary"]
     sheet["A1"] = "Organization Name"
     sheet["B1"] = "Network Name"
     sheet["C1"] = "Test Name"
