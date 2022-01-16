@@ -294,6 +294,41 @@ def check_switch_storm_control(network_id: str) -> dict:
         return({'is_ok': False})
 
 
+def check_org_admins() -> dict:
+    """
+    This fuction checks the administration settings of the organization.
+    
+    it will return a dictionary with the results for the admin checks.
+    e.g. {
+    'is_ok': False,
+    'more_than_one_admin': True,
+    'missing_2fa': ['user1@org.com', 'user2@org.com']
+    }
+ 
+    """
+    print("\n\t\tAnalyzing organization admins...\n")
+    result = {'is_ok': False, 'more_than_one_admin': False, 'missing_2fa': []}
+    org_admins = dashboard.organizations.getOrganizationAdmins(org_id)
+    # Filter full right admins (not just read-only or network specific admins)
+    full_right_admins = [admin for admin in org_admins if admin['orgAccess'] == 'full']
+    for admin in org_admins:
+        if admin['twoFactorAuthEnabled'] == False:
+            result['missing_2fa'].append(admin['email'])
+            pp(f"[yellow]Missing 2FA for admin {admin['name']} (email: {admin['email']})")
+        else:
+            pp(f"[green]Admin {admin['name']} (email: {admin['email']}) has 2FA enabled")
+    if len(full_right_admins) > 1:
+        result['more_than_one_admin'] = True
+        pp(f"[green]More than one admin has full rights. This is recommended.")
+    else:
+        pp(f"[red]Only one admin has full rights. It's recommended to have at least one admin with full rights.")
+    if result['more_than_one_admin'] == True and result['missing_2fa'] == []:
+        result['is_ok'] = True
+    else:
+        result['is_ok'] = False
+    return (result)
+    
+
 def generate_excel_report(results: dict) -> None:
     print("\n\t\tGenerating an Excel Report...\n")
     workbook = Workbook()
@@ -337,9 +372,20 @@ def generate_excel_report(results: dict) -> None:
     sheet["B1"] = "Network Name"
     sheet["C1"] = "Test Name"
     sheet["D1"] = "Test Result"
-    line = 2
     #
+    sheet["A2"] = org_name
+    sheet["B2"] = "N/A"
+    sheet["C2"] = "Organization Settings"
+    if results['org_settings']['is_ok'] == True:
+        sheet["D2"] = "OK"
+    else:
+        sheet["D2"] = "Fail"
+        sheet["D2"].font = Font(bold=True, color="00FF0000")
+    #
+    line = 3
     for network in results:
+        if network == 'org_settings':
+            continue
         for test_name in results[network]:
             sheet[f"A{line}"] = org_name
             sheet[f"B{line}"] = network
@@ -350,6 +396,21 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"D{line}"] = "Fail"
                 sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
             line += 1
+    #
+    # Organization Admin tab
+    workbook.create_sheet("Organization Admin")
+    sheet = workbook["Organization Admin"]
+    sheet["A1"] = "Organization Name"
+    sheet["A2"] = org_name
+    sheet["B1"] = "2+ admins"
+    if results['org_settings']['more_than_one_admin']:
+        sheet["B2"] = "Yes"
+    else:
+        sheet["B2"] = "No"
+        sheet["B2"].font = Font(bold=True, color="00FF0000")
+    sheet["C1"] = "Admins missing 2FA"
+    sheet["C2"] = str(results['org_settings']['missing_2fa']) if results['org_settings']['missing_2fa'] != [] else ""
+    sheet["C2"].font = Font(bold=True, color="00FF0000")
     #
     # Network Health Alerts tab
     workbook.create_sheet("Network Health Alerts")
@@ -363,6 +424,8 @@ def generate_excel_report(results: dict) -> None:
     line = 2
     #
     for network in results:
+        if network == 'org_settings':
+            continue
         if results[network]['network_health_alerts']['is_ok'] == True:
             pass
         else:
@@ -518,6 +581,13 @@ if __name__ == '__main__':
     org_id, org_name = select_org()
     results = {}
     
+    # Run organization checks
+    pp(f"[bold magenta]\n{90*'*'}")
+    pp(f"[bold magenta]{10*'*' : <30}{' ' : ^30}{10*'*' : >30}")
+    pp(f"[bold magenta]{10*'*' : <30}Organization: {org_name : ^16}{10*'*' : >30}")
+    pp(f"[bold magenta]{10*'*' : <30}{' ' : ^30}{10*'*' : >30}")
+    pp(f"[bold magenta]{90*'*'}\n")
+    results['org_settings'] = check_org_admins()
     # Get networks
     networks = dashboard.organizations.getOrganizationNetworks(org_id)
     for network in networks:
