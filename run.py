@@ -302,21 +302,30 @@ def check_org_admins() -> dict:
     e.g. {
     'is_ok': False,
     'more_than_one_admin': True,
-    'missing_2fa': ['user1@org.com', 'user2@org.com']
+    'users': {
+        '123456': {'email': 'user1@org.com', 'name': 'user1', '2fa': True, 'api_calls': 50},
+        '654321': {'email': 'user2@org.com', 'name': 'user2', '2fa': False, 'api_calls': 50}},
+    'missing_2fa': True,
+    'api_calls': 127
     }
  
     """
     print("\n\t\tAnalyzing organization admins...\n")
-    result = {'is_ok': False, 'more_than_one_admin': False, 'missing_2fa': []}
+    result = {  'is_ok': False,
+                'more_than_one_admin': False,
+                'users': {},
+                'missing_2fa': True,
+                'api_calls': 0
+            }
     org_admins = dashboard.organizations.getOrganizationAdmins(org_id)
-    # Filter full right admins (not just read-only or network specific admins)
-    full_right_admins = [admin for admin in org_admins if admin['orgAccess'] == 'full']
     for admin in org_admins:
+        result['users'][admin['id']] = {'email': admin['email'], 'name': admin['name'], '2fa': admin['twoFactorAuthEnabled'], 'api_calls': 0}
         if admin['twoFactorAuthEnabled'] == False:
-            result['missing_2fa'].append(admin['email'])
             pp(f"[yellow]Missing 2FA for admin {admin['name']} (email: {admin['email']})")
         else:
             pp(f"[green]Admin {admin['name']} (email: {admin['email']}) has 2FA enabled")
+    # Filter full right admins (not just read-only or network specific admins)
+    full_right_admins = [admin for admin in org_admins if admin['orgAccess'] == 'full']
     if len(full_right_admins) > 1:
         result['more_than_one_admin'] = True
         pp(f"[green]More than one admin has full rights. This is recommended.")
@@ -326,6 +335,13 @@ def check_org_admins() -> dict:
         result['is_ok'] = True
     else:
         result['is_ok'] = False
+    # Check API access
+    pp("Fetching the last 5,000 API calls")
+    api_requests = dashboard.organizations.getOrganizationApiRequests(org_id, total_pages=5, timespan=7*86400, perPage=1000)
+    result['api_calls'] = len(api_requests)
+    pp(f"API access usage: {result['api_calls']} API calls during the last week.")
+    for request in api_requests:
+        result['users'][admin['id']]['api_calls'] += 1
     return (result)
     
 
@@ -347,21 +363,24 @@ def generate_excel_report(results: dict) -> None:
     sheet["B13"] = "1. Summary - This tab presents a summary of the results of the health check."
     sheet["B14"] = "2. Network Health Alerts - This tab presents the dashboard alerts from all networks in a single view."
     sheet["B15"] = f"3. Network Health - This tab presents the Channel Utilization for every wireless AP. We will examine only the 5GHz spectrum; If you are using the 2.4GHz spectrum - it's beyond saving..."
-    sheet["C16"] = f"The threshold is set to {thresholds['5G Channel Utilization']}%. APs with a utilization above this threshold for many occurances (10+) may be experiencing RF issues."
+    sheet["C16"] =      f"The threshold is set to {thresholds['5G Channel Utilization']}%. APs with a utilization above this threshold for many occurances (10+) may be experiencing RF issues."
     sheet["B17"] = "4. RF profiles - This tab presents the (non-default) RF profiles for every network."
-    sheet["C18"] = f"Minimum Tx power: Setting the minimum Tx power too high, might result in wireless APs interefering with each other, as they are not allowed to decrease their power. The threshold is set to {thresholds['5G Min TX Power']} dBm."
-    sheet["C19"] = f"Minimum bitrate: Broadcasts and Multicasts will be sent over the wireless at this speed. The lower the speed - the more airtime is wasted. The threshold is set to {thresholds['5G Min Bitrate']} Mbps."
-    sheet["C20"] = f"Channel Width: Depending on local regulation and wireless AP density, there is a limited number of channels that can be used. In most deployments, channel width of more than {thresholds['5G Max Channel Width']}MHz might cause interferece between the wireless APs."
-    sheet["C21"] = f"RX-SOP: This is a fine tuning network design tool that should be used only after consulting an independent wireless expert or Meraki Support. If it's configured - there should be a good reason for it. More details at: https://documentation.meraki.com/MR/Radio_Settings/Receive_Start_of_Packet_(RX-SOP)"
+    sheet["C18"] =      f"Minimum Tx power: Setting the minimum Tx power too high, might result in wireless APs interefering with each other, as they are not allowed to decrease their power. The threshold is set to {thresholds['5G Min TX Power']} dBm."
+    sheet["C19"] =      f"Minimum bitrate: Broadcasts and Multicasts will be sent over the wireless at this speed. The lower the speed - the more airtime is wasted. The threshold is set to {thresholds['5G Min Bitrate']} Mbps."
+    sheet["C20"] =      f"Channel Width: Depending on local regulation and wireless AP density, there is a limited number of channels that can be used. In most deployments, channel width of more than {thresholds['5G Max Channel Width']}MHz might cause interferece between the wireless APs."
+    sheet["C21"] =      f"RX-SOP: This is a fine tuning network design tool that should be used only after consulting an independent wireless expert or Meraki Support. If it's configured - there should be a good reason for it. More details at: https://documentation.meraki.com/MR/Radio_Settings/Receive_Start_of_Packet_(RX-SOP)"
     sheet["B22"] = f"5. Switch port counters: This tab presents every switch in every network."
-    sheet["C23"] = f"Ports with CRC errors: We do not expect to see any CRC errors on our network, ports with more than 0 CRC errors will appear here."
-    sheet["C24"] = f"Ports with colissions: It's 2022.. we shouldn't be seeing hubs or collisions on our network. Ports with more than 0 collisions will appear here."
-    sheet["C25"] = f"Multicasts exceeding threshold: Multicast traffic may be legitimate, we're highlighting ports with more than {thresholds['multicast_rate']} multicasts per second for visibility (and making sure they are legitimate)."
-    sheet["C26"] = f"Broadcasts exceeding threshold: Broadcasts above a certain threshold should be looked at, we're highlighting ports with more than {thresholds['broadcast_rate']} broadcasts per second for visibility (and making sure they are legitimate)."
-    sheet["C27"] = f"Topology changes exceeding threshold: TCN means something has changed in the STP topology. We're highlighting ports with more than {thresholds['topology_changes']} topology changes for visibility (and making sure they are legitimate)."
+    sheet["C23"] =      f"Ports with CRC errors: We do not expect to see any CRC errors on our network, ports with more than 0 CRC errors will appear here."
+    sheet["C24"] =      f"Ports with colissions: It's 2022.. we shouldn't be seeing hubs or collisions on our network. Ports with more than 0 collisions will appear here."
+    sheet["C25"] =      f"Multicasts exceeding threshold: Multicast traffic may be legitimate, we're highlighting ports with more than {thresholds['multicast_rate']} multicasts per second for visibility (and making sure they are legitimate)."
+    sheet["C26"] =      f"Broadcasts exceeding threshold: Broadcasts above a certain threshold should be looked at, we're highlighting ports with more than {thresholds['broadcast_rate']} broadcasts per second for visibility (and making sure they are legitimate)."
+    sheet["C27"] =      f"Topology changes exceeding threshold: TCN means something has changed in the STP topology. We're highlighting ports with more than {thresholds['topology_changes']} topology changes for visibility (and making sure they are legitimate)."
+    sheet["B28"] = f"6. Organization Settings - This tab presents the organization settings."
+    sheet["C29"] =      f"Multiple admins: We're looking for a single admin with full rights. If you see more than one admin with full rights - it's recommended to have at least one admin with full rights."
+    sheet["C30"] =      f"2FA: Two Factor Authentication is an important security mechanism, highly recommended for securing your admin accounts."
     #
     # Increasing font size
-    for line in range(5, 30):
+    for line in range(5, 40):
         sheet[f"B{line}"].font = Font(size=16)
         sheet[f"C{line}"].font = Font(size=16)
     #
@@ -411,6 +430,26 @@ def generate_excel_report(results: dict) -> None:
     sheet["C1"] = "Admins missing 2FA"
     sheet["C2"] = str(results['org_settings']['missing_2fa']) if results['org_settings']['missing_2fa'] != [] else ""
     sheet["C2"].font = Font(bold=True, color="00FF0000")
+    sheet["D1"] = "API Calls (last 7 days)"
+    sheet["D2"] = results['org_settings']['api_calls']
+    #
+    sheet["A5"] = "Organization Name"
+    sheet["B5"] = "Admin Name"
+    sheet["C5"] = "Admin Email"
+    sheet["D5"] = "2FA enablement"
+    sheet["E5"] = "API Calls (last 7 days)"
+    line = 6
+    for admin in results['org_settings']['users']:
+        sheet[f"A{line}"] = org_name
+        sheet[f"B{line}"] = results['org_settings']['users'][admin]['name']
+        sheet[f"C{line}"] = results['org_settings']['users'][admin]['email']
+        if results['org_settings']['users'][admin]['2fa']:
+            sheet[f"D{line}"] = "Yes"
+        else:
+            sheet[f"D{line}"] = "No"
+            sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
+        sheet[f"E{line}"] = results['org_settings']['users'][admin]['api_calls']
+        line += 1
     #
     # Network Health Alerts tab
     workbook.create_sheet("Network Health Alerts")
