@@ -294,6 +294,33 @@ def check_switch_storm_control(network_id: str) -> dict:
         return({'is_ok': False})
 
 
+def check_network_firmware(network_id: str) -> dict:
+    """
+    This fuction checks the firmware versions of a given network. 
+    e.g. {
+        'appliance': {'current_version_name': 'MX 16.15', 'latest_stable_version': 'MX 16.15'},
+        'wireless': {'current_version_name': 'MR 27.7.1', 'latest_stable_version': 'MR 28.5'}
+    }
+    """
+    result = {'is_ok': True}
+    print("\n\t\tChecking Firmware Version...\n")
+    firmware = dashboard.networks.getNetworkFirmwareUpgrades(network_id)['products']
+    for product in firmware:
+        current_version = firmware[product]['currentVersion']['shortName']
+        # Looking for the latest stable version
+        for version in firmware[product]['availableVersions']:
+            if version['releaseType'] == "stable":
+                latest_stable_version = version['shortName']
+        if current_version == latest_stable_version:
+            pp(f"[green]{product.upper()} is running the current stable version ({current_version})")
+        else:
+            pp(f"[red]{product.upper()} is not running the current stable version (current: {current_version}, current stable version: {latest_stable_version})")
+            result['is_ok'] = False
+        #
+        result[product] = {'current_version': current_version, 'latest_stable_version': latest_stable_version}
+    return(result)
+
+
 def check_org_admins() -> dict:
     """
     This fuction checks the administration settings of the organization.
@@ -364,20 +391,21 @@ def generate_excel_report(results: dict) -> None:
     sheet["B14"] = "2. Network Health Alerts - This tab presents the dashboard alerts from all networks in a single view."
     sheet["B15"] = f"3. Network Health - This tab presents the Channel Utilization for every wireless AP. We will examine only the 5GHz spectrum; If you are using the 2.4GHz spectrum - it's beyond saving..."
     sheet["C16"] =      f"The threshold is set to {thresholds['5G Channel Utilization']}%. APs with a utilization above this threshold for many occurances (10+) may be experiencing RF issues."
-    sheet["B17"] = "4. RF profiles - This tab presents the (non-default) RF profiles for every network."
-    sheet["C18"] =      f"Minimum Tx power: Setting the minimum Tx power too high, might result in wireless APs interefering with each other, as they are not allowed to decrease their power. The threshold is set to {thresholds['5G Min TX Power']} dBm."
-    sheet["C19"] =      f"Minimum bitrate: Broadcasts and Multicasts will be sent over the wireless at this speed. The lower the speed - the more airtime is wasted. The threshold is set to {thresholds['5G Min Bitrate']} Mbps."
-    sheet["C20"] =      f"Channel Width: Depending on local regulation and wireless AP density, there is a limited number of channels that can be used. In most deployments, channel width of more than {thresholds['5G Max Channel Width']}MHz might cause interferece between the wireless APs."
-    sheet["C21"] =      f"RX-SOP: This is a fine tuning network design tool that should be used only after consulting an independent wireless expert or Meraki Support. If it's configured - there should be a good reason for it. More details at: https://documentation.meraki.com/MR/Radio_Settings/Receive_Start_of_Packet_(RX-SOP)"
-    sheet["B22"] = f"5. Switch port counters: This tab presents every switch in every network."
-    sheet["C23"] =      f"Ports with CRC errors: We do not expect to see any CRC errors on our network, ports with more than 0 CRC errors will appear here."
-    sheet["C24"] =      f"Ports with colissions: It's 2022.. we shouldn't be seeing hubs or collisions on our network. Ports with more than 0 collisions will appear here."
-    sheet["C25"] =      f"Multicasts exceeding threshold: Multicast traffic may be legitimate, we're highlighting ports with more than {thresholds['multicast_rate']} multicasts per second for visibility (and making sure they are legitimate)."
-    sheet["C26"] =      f"Broadcasts exceeding threshold: Broadcasts above a certain threshold should be looked at, we're highlighting ports with more than {thresholds['broadcast_rate']} broadcasts per second for visibility (and making sure they are legitimate)."
-    sheet["C27"] =      f"Topology changes exceeding threshold: TCN means something has changed in the STP topology. We're highlighting ports with more than {thresholds['topology_changes']} topology changes for visibility (and making sure they are legitimate)."
-    sheet["B28"] = f"6. Organization Settings - This tab presents the organization settings."
-    sheet["C29"] =      f"Multiple admins: We're looking for a single admin with full rights. If you see more than one admin with full rights - it's recommended to have at least one admin with full rights."
-    sheet["C30"] =      f"2FA: Two Factor Authentication is an important security mechanism, highly recommended for securing your admin accounts."
+    sheet["B17"] = "4. Firmware Upgrade - This tab presents the firmware status for every network. Highlighting networks that requires a firmware upgrade."       
+    sheet["B18"] = "5. RF profiles - This tab presents the (non-default) RF profiles for every network."
+    sheet["C19"] =      f"Minimum Tx power: Setting the minimum Tx power too high, might result in wireless APs interefering with each other, as they are not allowed to decrease their power. The threshold is set to {thresholds['5G Min TX Power']} dBm."
+    sheet["C20"] =      f"Minimum bitrate: Broadcasts and Multicasts will be sent over the wireless at this speed. The lower the speed - the more airtime is wasted. The threshold is set to {thresholds['5G Min Bitrate']} Mbps."
+    sheet["C21"] =      f"Channel Width: Depending on local regulation and wireless AP density, there is a limited number of channels that can be used. In most deployments, channel width of more than {thresholds['5G Max Channel Width']}MHz might cause interferece between the wireless APs."
+    sheet["C22"] =      f"RX-SOP: This is a fine tuning network design tool that should be used only after consulting an independent wireless expert or Meraki Support. If it's configured - there should be a good reason for it. More details at: https://documentation.meraki.com/MR/Radio_Settings/Receive_Start_of_Packet_(RX-SOP)"
+    sheet["B23"] = f"6. Switch port counters: This tab presents every switch in every network."
+    sheet["C24"] =      f"Ports with CRC errors: We do not expect to see any CRC errors on our network, ports with more than 0 CRC errors will appear here."
+    sheet["C25"] =      f"Ports with colissions: It's 2022.. we shouldn't be seeing hubs or collisions on our network. Ports with more than 0 collisions will appear here."
+    sheet["C26"] =      f"Multicasts exceeding threshold: Multicast traffic may be legitimate, we're highlighting ports with more than {thresholds['multicast_rate']} multicasts per second for visibility (and making sure they are legitimate)."
+    sheet["C27"] =      f"Broadcasts exceeding threshold: Broadcasts above a certain threshold should be looked at, we're highlighting ports with more than {thresholds['broadcast_rate']} broadcasts per second for visibility (and making sure they are legitimate)."
+    sheet["C28"] =      f"Topology changes exceeding threshold: TCN means something has changed in the STP topology. We're highlighting ports with more than {thresholds['topology_changes']} topology changes for visibility (and making sure they are legitimate)."
+    sheet["B29"] = f"7. Organization Settings - This tab presents the organization settings."
+    sheet["C30"] =      f"Multiple admins: We're looking for a single admin with full rights. If you see more than one admin with full rights - it's recommended to have at least one admin with full rights."
+    sheet["C31"] =      f"2FA: Two Factor Authentication is an important security mechanism, highly recommended for securing your admin accounts."
     #
     # Increasing font size
     for line in range(5, 40):
@@ -482,6 +510,31 @@ def generate_excel_report(results: dict) -> None:
                     for cell in sheet[line:line]:
                         cell.font = Font(bold=True, color="00FF9900")
                 line += 1   
+    #
+    # Network Firmware tab
+    workbook.create_sheet("Network Firmware")
+    sheet = workbook["Network Firmware"]
+    sheet["A1"] = "Organization Name"
+    sheet["B1"] = "Network Name"
+    sheet["C1"] = "Product Catagory"
+    sheet["D1"] = "Current Version"
+    sheet["E1"] = "Latest Stable Version"
+    line = 2
+    #
+    for network in results:
+        if "network_firmware_check" in results[network].keys():
+            for product in results[network]['network_firmware_check']:
+                if product == "is_ok":   # skipping the is_ok key
+                    continue
+                sheet[f"A{line}"] = org_name
+                sheet[f"B{line}"] = network
+                sheet[f"C{line}"] = product
+                sheet[f"D{line}"] = results[network]['network_firmware_check'][product]['current_version']
+                sheet[f"E{line}"] = results[network]['network_firmware_check'][product]['latest_stable_version']
+                if results[network]['network_firmware_check'][product]['current_version'] != results[network]['network_firmware_check'][product]['latest_stable_version']:
+                    for cell in sheet[line:line]:
+                        cell.font = Font(bold=True, color="00FF9900")
+                line += 1
     #
     # Channel Utilization tab
     workbook.create_sheet("Channel Utilization")
@@ -639,6 +692,7 @@ if __name__ == '__main__':
         pp(f"[bold magenta]{90*'*'}\n")
         # General checks
         results[network['name']]['network_health_alerts'] = check_network_health_alerts(network_id)
+        results[network['name']]['network_firmware_check'] = check_network_firmware(network_id)
         
         if "wireless" in network['productTypes']:
             # Wireless checks
