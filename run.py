@@ -107,16 +107,40 @@ def check_wifi_rf_profiles(network_id: str) -> dict:
     This fuction checks the RF profiles for a given network. 
 
     it will return a dictionary with the result for each AP.
-    e.g. {
-    'is_ok': False,
-    'RF Profile 1': {'is_ok': False, 'min_power': 30, 'min_bitrate': 12, 'channel_width': '80', 'rxsop': None},
-    'RF Profile 2': {'is_ok': True, 'min_power': 2, 'min_bitrate': 12, 'channel_width': 'auto', 'rxsop': None}
-    }
+    e.g.     
+    {'is_ok': False,
+    'RF Profile 1': {
+                'is_ok': False,
+                'tests': {
+                    'min_power': {'is_ok': True, 'value': 8},
+                    'min_bitrate': {'is_ok': True, 'value': 54},
+                    'channel_width': {'is_ok': True, 'value': '40'},
+                    'rxsop': {'is_ok': False, 'value': -75}
+                }},
+    'RF Profile 2': {
+                'is_ok': True,
+                'tests': {
+                    'min_power': {'is_ok': True, 'value': 5},
+                    'min_bitrate': {'is_ok': True, 'value': 54},
+                    'channel_width': {'is_ok': False, 'value': 'auto'},
+                    'rxsop': {'is_ok': True, 'value': None}
+                }}}
 
     """
     print("\n\t\tChecking WiFi RF Profiles...\n")
     result = {'is_ok': True}
-    rf_profiles = dashboard.wireless.getNetworkWirelessRfProfiles(network_id)
+    try:
+        rf_profiles = dashboard.wireless.getNetworkWirelessRfProfiles(network_id)
+    except:
+        pp(f"[red]Could not fetch RF profiles for network {network_id}")
+        return({'is_ok': False, 'ERROR': {
+                'is_ok': False,
+                'tests': {
+                    'min_power': {'is_ok': False, 'value': ""},
+                    'min_bitrate': {'is_ok': True, 'value': ""},
+                    'channel_width': {'is_ok': True, 'value': ""},
+                    'rxsop': {'is_ok': False, 'value': ""}
+                }}})
     for rf_profile in rf_profiles:
         result[rf_profile['name']] = {  'is_ok': True, 
                                         'tests': {
@@ -284,7 +308,7 @@ def check_switch_storm_control(network_id: str) -> dict:
     """
     This fuction checks the storm control settings of a given network. 
     """
-    print("'n\t\tChecking Switch Storm Control...\n")
+    print("\n\t\tChecking Switch Storm Control...\n")
     storm_control = dashboard.switch.getNetworkSwitchStormControl(network_id)
     if storm_control['broadcastThreshold'] < 100 and storm_control['multicastThreshold'] < 100 and storm_control['unknownUnicastThreshold'] < 100:
         pp(f"[green]Storm-control is enabled for network {network_id}.")
@@ -313,11 +337,13 @@ def check_network_firmware(network_id: str) -> dict:
                 latest_stable_version = version['shortName']
         if current_version == latest_stable_version:
             pp(f"[green]{product.upper()} is running the current stable version ({current_version})")
+        elif firmware[product]['nextUpgrade']['time'] != "":
+            pp(f"[green]{product.upper()} is not running the current stable version ({current_version}), but an upgrade is scheduled for {firmware[product]['nextUpgrade']['time']}")
         else:
             pp(f"[red]{product.upper()} is not running the current stable version (current: {current_version}, current stable version: {latest_stable_version})")
             result['is_ok'] = False
         #
-        result[product] = {'current_version': current_version, 'latest_stable_version': latest_stable_version}
+        result[product] = {'current_version': current_version, 'latest_stable_version': latest_stable_version, 'scheduled_upgrade': firmware[product]['nextUpgrade']['time']}
     return(result)
 
 
@@ -368,7 +394,7 @@ def check_org_admins() -> dict:
     result['api_calls'] = len(api_requests)
     pp(f"API access usage: {result['api_calls']} API calls during the last week.")
     for request in api_requests:
-        result['users'][admin['id']]['api_calls'] += 1
+        result['users'][request['adminId']]['api_calls'] += 1
     return (result)
     
 
@@ -519,6 +545,7 @@ def generate_excel_report(results: dict) -> None:
     sheet["C1"] = "Product Catagory"
     sheet["D1"] = "Current Version"
     sheet["E1"] = "Latest Stable Version"
+    sheet["F1"] = "Scheduled Update"
     line = 2
     #
     for network in results:
@@ -531,6 +558,7 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"C{line}"] = product
                 sheet[f"D{line}"] = results[network]['network_firmware_check'][product]['current_version']
                 sheet[f"E{line}"] = results[network]['network_firmware_check'][product]['latest_stable_version']
+                sheet[f"F{line}"] = results[network]['network_firmware_check'][product]['scheduled_upgrade']
                 if results[network]['network_firmware_check'][product]['current_version'] != results[network]['network_firmware_check'][product]['latest_stable_version']:
                     for cell in sheet[line:line]:
                         cell.font = Font(bold=True, color="00FF9900")
@@ -676,7 +704,7 @@ if __name__ == '__main__':
     # Run organization checks
     pp(f"[bold magenta]\n{90*'*'}")
     pp(f"[bold magenta]{10*'*' : <30}{' ' : ^30}{10*'*' : >30}")
-    pp(f"[bold magenta]{10*'*' : <30}Organization: {org_name : ^16}{10*'*' : >30}")
+    pp(f"[bold magenta]{10*'*' : <20}Organization: {org_name : ^36}{10*'*' : >20}")
     pp(f"[bold magenta]{10*'*' : <30}{' ' : ^30}{10*'*' : >30}")
     pp(f"[bold magenta]{90*'*'}\n")
     results['org_settings'] = check_org_admins()
@@ -692,7 +720,10 @@ if __name__ == '__main__':
         pp(f"[bold magenta]{90*'*'}\n")
         # General checks
         results[network['name']]['network_health_alerts'] = check_network_health_alerts(network_id)
-        results[network['name']]['network_firmware_check'] = check_network_firmware(network_id)
+        try:
+            results[network['name']]['network_firmware_check'] = check_network_firmware(network_id)
+        except:
+            pp(f"[yellow]The network {network_id} has an issue with the firmware upgrade schedule...")
         
         if "wireless" in network['productTypes']:
             # Wireless checks
@@ -724,3 +755,4 @@ if __name__ == '__main__':
 
     pp(clean_results)
     generate_excel_report(clean_results)
+    pp("Done.")
