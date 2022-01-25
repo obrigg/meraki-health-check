@@ -87,11 +87,11 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
         if len(utilization_list) == 0:
             pp(f"[yellow]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
         elif len(exceeded_utilization_list) > 0:
-            pp(f"[red]5G Channel Utilization exceeded {thresholds['5G Channel Utilization']}% {len(exceeded_utilization_list)} times, with a peak of {max(utilization_list)}% for AP {ap['serial']}")
+            pp(f"[red]5GHz Channel Utilization exceeded {thresholds['5G Channel Utilization']}% {len(exceeded_utilization_list)} times, with a peak of {max(utilization_list)}% for AP {ap['serial']}")
             result[ap['serial']] = {'is_ok': False, 'utilization': max(utilization_list), 'occurances': len(exceeded_utilization_list)}
             result['is_ok'] = False
         else:
-            pp(f"[green]5G Channel did not exceed {thresholds['5G Channel Utilization']}% for AP {ap['serial']}, max utilization was {max(utilization_list)}")
+            pp(f"[green]5GHz Channel did not exceed {thresholds['5G Channel Utilization']}% for AP {ap['serial']}, max utilization was {max(utilization_list)}")
             result[ap['serial']] = {'is_ok': True, 'utilization': max(utilization_list), 'occurances': ''}
     # Adding AP names
     network_devices = dashboard.networks.getNetworkDevices(network_id)
@@ -295,7 +295,7 @@ def check_switch_mtu(network_id: str) -> dict:
     """
     print("\n\t\tChecking Switch MTU...\n")
     mtu = dashboard.switch.getNetworkSwitchMtu(network_id)
-    if mtu['defaultMtuSize'] > 9100 or mtu['overrides'] == []:
+    if mtu['defaultMtuSize'] == 9578 and mtu['overrides'] == []:
         pp(f"[green]Jumbo Frames enabled for network {network_id} (MTU: {mtu['defaultMtuSize']})")
         return({'is_ok': True})
     else:
