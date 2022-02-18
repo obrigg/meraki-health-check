@@ -23,7 +23,12 @@ Switchport counters tab:
 ---
 ### List of checks
 #### General checks
-1. Network heath alerts
+1. Network heath alerts: gathering all health alerts from all of the organization's networks.
+2. Multiple adminstrator users: verifying the organization has more than one admin with full control (per best practices).
+3. Admin 2FA: checks which admin users have 2FA enabled, and which admins do not (per best practices).
+4. API calls: present whether Dashboard API is being used, and by which admin usesr.
+5. API v0 usage: The Dashboard API v0 is being deprecated, and integrations should be updated to API v1.
+6. Firmware checks: compares the firmware versions of each network and device types to the latest stable release.
 #### Wireless checks
 1. Channel utilization (for 5GHz only, 2.4GHz is beyond saving...)
 2. RF Profile check:
@@ -69,9 +74,10 @@ Now you're ready. Good luck!
 1. The script intentionally ignores the 2.4GHz spectrum, as it is beyond salavion. It can be altered, if needed, in the `check_wifi_channel_utilization` function.
 2. The Meraki API does not retrieve the default RF policies. A network using a default RF policy with altered values will not show up in the report.
 3. The SSID amount check counts every **enabled** SSIDs, even if the SSID is limited to certain APs or to a certain band. You may have three ssids on 2.4GHz and three different SSIDs on 5GHz, but the check will fail as it counts six SSIDs.
+4. The API usage is checking the last 5,000 API calls. It can be changed in the code, more API calls being examines = longer run time for the script.
 ----
 ### Licensing info
-Copyright (c) 2021 Cisco and/or its affiliates.
+Copyright (c) 2022 Cisco and/or its affiliates.
 
 This software is licensed to you under the terms of the Cisco Sample
 Code License, Version 1.1 (the "License"). You may obtain a copy of the
