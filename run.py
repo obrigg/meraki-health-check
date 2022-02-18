@@ -1,4 +1,4 @@
-__version__ = '0.3'
+__version__ = '0.5'
 __author__ = 'Oren Brigg'
 __author_email__ = 'obrigg@cisco.com'
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
@@ -373,11 +373,12 @@ def check_org_admins() -> dict:
                 'more_than_one_admin': False,
                 'users': {},
                 'missing_2fa': True,
-                'api_calls': 0
+                'api_calls': 0,
+                'using_v0': False
             }
     org_admins = dashboard.organizations.getOrganizationAdmins(org_id)
     for admin in org_admins:
-        result['users'][admin['id']] = {'email': admin['email'], 'name': admin['name'], '2fa': admin['twoFactorAuthEnabled'], 'api_calls': 0}
+        result['users'][admin['id']] = {'email': admin['email'], 'name': admin['name'], '2fa': admin['twoFactorAuthEnabled'], 'api_calls': 0, 'using_v0': False}
         if admin['twoFactorAuthEnabled'] == False:
             pp(f"[yellow]Missing 2FA for admin {admin['name']} (email: {admin['email']})")
         else:
@@ -400,6 +401,11 @@ def check_org_admins() -> dict:
     pp(f"API access usage: {result['api_calls']} API calls during the last week.")
     for request in api_requests:
         result['users'][request['adminId']]['api_calls'] += 1
+        if "/v0/" in request['path']:
+            result['using_v0'] = True
+            result['users'][request['adminId']]['using_v0'] = True
+            pp(f"[red]Admin {result['users'][request['adminId']]['name']} (email: {result['users'][request['adminId']]['email']}) is using the v0 API")
+            result['is_ok'] = False
     return (result)
     
 
@@ -437,6 +443,7 @@ def generate_excel_report(results: dict) -> None:
     sheet["B29"] = f"7. Organization Settings - This tab presents the organization settings."
     sheet["C30"] =      f"Multiple admins: We're looking for a single admin with full rights. If you see more than one admin with full rights - it's recommended to have at least one admin with full rights."
     sheet["C31"] =      f"2FA: Two Factor Authentication is an important security mechanism, highly recommended for securing your admin accounts."
+    sheet["C32"] =      f"API access: presenting which admin users are using the Dashboard API, and whether they are using the v0 API which is being deprecated."
     #
     # Increasing font size
     for line in range(5, 40):
@@ -491,12 +498,19 @@ def generate_excel_report(results: dict) -> None:
     sheet["C2"].font = Font(bold=True, color="00FF0000")
     sheet["D1"] = "API Calls (last 7 days)"
     sheet["D2"] = results['org_settings']['api_calls']
+    sheet["E1"] = "Using API v0 ?"
+    if results['org_settings']['using_v0']:
+        sheet["E2"] = "Yes"
+        sheet["E2"].font = Font(bold=True, color="00FF0000")
+    else:
+        sheet["E2"] = "No"
     #
     sheet["A5"] = "Organization Name"
     sheet["B5"] = "Admin Name"
     sheet["C5"] = "Admin Email"
     sheet["D5"] = "2FA enablement"
     sheet["E5"] = "API Calls (last 7 days)"
+    sheet["F5"] = "Using API v0"
     line = 6
     for admin in results['org_settings']['users']:
         sheet[f"A{line}"] = org_name
@@ -508,6 +522,11 @@ def generate_excel_report(results: dict) -> None:
             sheet[f"D{line}"] = "No"
             sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
         sheet[f"E{line}"] = results['org_settings']['users'][admin]['api_calls']
+        if results['org_settings']['users'][admin]['using_v0']:
+            sheet[f"F{line}"] = "Yes"
+            sheet[f"F{line}"].font = Font(bold=True, color="00FF0000")
+        else:
+            sheet[f"F{line}"] = "No"
         line += 1
     #
     # Network Health Alerts tab
