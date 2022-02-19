@@ -731,8 +731,13 @@ def generate_excel_report(results: dict) -> None:
     for sheet_name in workbook.sheetnames:
         sheet = workbook[sheet_name]
         for column in sheet.columns:
+            max_length = 0
             for cell in column:
                 cell.font = Font(size=16, bold=cell.font.bold, color=cell.font.color)
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            if not "Introduction" in sheet_name:
+                sheet.column_dimensions[column[0].column_letter].width = max_length + 10
     #
     sheet = workbook["Introduction"]
     sheet["B3"].font = Font(bold=True, size=36)
