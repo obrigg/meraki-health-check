@@ -411,13 +411,13 @@ def check_org_admins() -> dict:
 
 def generate_excel_report(results: dict) -> None:
     print("\n\t\tGenerating an Excel Report...\n")
+    ABC = [None, "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
     workbook = Workbook()
     sheet = workbook.active
     #
     # Intro tab
     sheet.title = "Introduction"
     sheet["B3"] = "Introduction to the Meraki health check report"
-    sheet["B3"].font = Font(bold=True, size=36)
     sheet["B5"] = "Cisco Meraki is an amazing cloud-managed IT solution, simplying network, security, security cameras and IoT infrastructure."
     sheet["B6"] = "However, even the most intelligent AI/ML driven solution is still volunerable to users misconfiguring various options (usually without reading the documentation). "
     sheet["B7"] = "Misconfiguration can result in an outage, or poor user experience (if you will limit user's traffic to 1Mbps - things will work slowly.. AI won't help there as it's the admin's 'intent')."
@@ -444,11 +444,6 @@ def generate_excel_report(results: dict) -> None:
     sheet["C30"] =      f"Multiple admins: We're looking for a single admin with full rights. If you see more than one admin with full rights - it's recommended to have at least one admin with full rights."
     sheet["C31"] =      f"2FA: Two Factor Authentication is an important security mechanism, highly recommended for securing your admin accounts."
     sheet["C32"] =      f"API access: presenting which admin users are using the Dashboard API, and whether they are using the v0 API which is being deprecated."
-    #
-    # Increasing font size
-    for line in range(5, 40):
-        sheet[f"B{line}"].font = Font(size=16)
-        sheet[f"C{line}"].font = Font(size=16)
     #
     # Summary tab
     workbook.create_sheet("Summary")
@@ -481,6 +476,10 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"D{line}"] = "Fail"
                 sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
             line += 1
+    #
+    # Adding filters
+    sheet.auto_filter.ref = f"A1:{ABC[sheet.max_column]}{line}"
+    sheet.auto_filter.add_filter_column(0, ["Test Result"])
     #
     # Organization Admin tab
     workbook.create_sheet("Organization Admin")
@@ -529,6 +528,10 @@ def generate_excel_report(results: dict) -> None:
             sheet[f"F{line}"] = "No"
         line += 1
     #
+    # Adding filters
+    sheet.auto_filter.ref = f"A5:{ABC[sheet.max_column]}{line}"
+    sheet.auto_filter.add_filter_column(0, ["Admin Name"])
+    #
     # Network Health Alerts tab
     workbook.create_sheet("Network Health Alerts")
     sheet = workbook["Network Health Alerts"]
@@ -561,6 +564,10 @@ def generate_excel_report(results: dict) -> None:
                         cell.font = Font(bold=True, color="00FF9900")
                 line += 1   
     #
+    # Adding filters
+    sheet.auto_filter.ref = f"A1:{ABC[sheet.max_column]}{line}"
+    sheet.auto_filter.add_filter_column(0, ["Network Name"])
+    #
     # Network Firmware tab
     workbook.create_sheet("Network Firmware")
     sheet = workbook["Network Firmware"]
@@ -587,6 +594,10 @@ def generate_excel_report(results: dict) -> None:
                     for cell in sheet[line:line]:
                         cell.font = Font(bold=True, color="00FF9900")
                 line += 1
+    #
+    # Adding filters
+    sheet.auto_filter.ref = f"A1:{ABC[sheet.max_column]}{line}"
+    sheet.auto_filter.add_filter_column(0, ["Network Name"])
     #
     # Channel Utilization tab
     workbook.create_sheet("Channel Utilization")
@@ -616,6 +627,10 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"E{line}"] = results[network]['channel_utilization_check'][ap]['utilization']
                 sheet[f"F{line}"] = results[network]['channel_utilization_check'][ap]['occurances']
                 line += 1
+    #
+    # Adding filters
+    sheet.auto_filter.ref = f"A1:{ABC[sheet.max_column]}{line}"
+    sheet.auto_filter.add_filter_column(0, ["Max Utilization"])
     #
     # RF Profile tab
     workbook.create_sheet("RF Profiles")
@@ -660,6 +675,10 @@ def generate_excel_report(results: dict) -> None:
                         sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
     #
+    # Adding filters
+    sheet.auto_filter.ref = f"A1:{ABC[sheet.max_column]}{line}"
+    sheet.auto_filter.add_filter_column(0, ["Result"])
+    #
     # Switch ports tab
     workbook.create_sheet("Switch port counters")
     sheet = workbook["Switch port counters"]
@@ -703,6 +722,20 @@ def generate_excel_report(results: dict) -> None:
                     sheet[f"I{line}"] = str(results[network]['port_counters_check'][switch]['topology_changes'])
                     sheet[f"I{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
+    #
+    # Adding filters
+    sheet.auto_filter.ref = f"A1:{ABC[sheet.max_column]}{line}"
+    sheet.auto_filter.add_filter_column(0, ["Result"])
+    #
+    # Formatting: increasing font size, adjusting column width
+    for sheet_name in workbook.sheetnames:
+        sheet = workbook[sheet_name]
+        for column in sheet.columns:
+            for cell in column:
+                cell.font = Font(size=16, bold=cell.font.bold, color=cell.font.color)
+    #
+    sheet = workbook["Introduction"]
+    sheet["B3"].font = Font(bold=True, size=36)
     #
     workbook.save(filename=f"{org_name}.xlsx")
 
