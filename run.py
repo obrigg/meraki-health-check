@@ -91,13 +91,19 @@ def check_wifi_channel_utilization(network_id: str) -> dict:
         exceeded_utilization_list = [utilization for utilization in utilization_list if utilization > thresholds['5G Channel Utilization']]
         if len(utilization_list) == 0:
             pp(f"[yellow]AP {ap['serial']} does not have 5GHz enabled. Skipping...")
-        elif len(exceeded_utilization_list) > 0:
-            pp(f"[red]5GHz Channel Utilization exceeded {thresholds['5G Channel Utilization']}% {len(exceeded_utilization_list)} times, with a peak of {max(utilization_list)}% for AP {ap['serial']}")
+        elif len(exceeded_utilization_list) < thresholds['5G Occurances Warning']:
+            pp(f"[green]5GHz Channel Utilization exceeded {thresholds['5G Channel Utilization']}% {len(exceeded_utilization_list)} times, with a peak of {max(utilization_list)}% for AP {ap['serial']}")
+            result[ap['serial']] = {'is_ok': True, 'utilization': max(utilization_list), 'occurances': len(exceeded_utilization_list)}
+            result['is_ok'] = False
+        elif len(exceeded_utilization_list) < thresholds['5G Occurances Alarm']:
+            pp(f"[dark_orange]5GHz Channel Utilization exceeded {thresholds['5G Channel Utilization']}% {len(exceeded_utilization_list)} times, with a peak of {max(utilization_list)}% for AP {ap['serial']}")
             result[ap['serial']] = {'is_ok': False, 'utilization': max(utilization_list), 'occurances': len(exceeded_utilization_list)}
             result['is_ok'] = False
         else:
-            pp(f"[green]5GHz Channel did not exceed {thresholds['5G Channel Utilization']}% for AP {ap['serial']}, max utilization was {max(utilization_list)}")
-            result[ap['serial']] = {'is_ok': True, 'utilization': max(utilization_list), 'occurances': ''}
+            pp(f"[red]5GHz Channel Utilization exceeded {thresholds['5G Channel Utilization']}% {len(exceeded_utilization_list)} times, with a peak of {max(utilization_list)}% for AP {ap['serial']}")
+            result[ap['serial']] = {'is_ok': False, 'utilization': max(utilization_list), 'occurances': len(exceeded_utilization_list)}
+            result['is_ok'] = False
+
     # Adding AP names
     network_devices = dashboard.networks.getNetworkDevices(network_id)
     for device in network_devices:
@@ -618,8 +624,12 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"A{line}"] = org_name
                 sheet[f"B{line}"] = network
                 sheet[f"C{line}"] = results[network]['channel_utilization_check'][ap]['name']
-                if results[network]['channel_utilization_check'][ap]['is_ok']:
+                if results[network]['channel_utilization_check'][ap]['occurances'] < thresholds['5G Occurances Warning']:
                     sheet[f"D{line}"] = "Pass"
+                elif results[network]['channel_utilization_check'][ap]['occurances'] < thresholds['5G Occurances Alarm']:
+                    sheet[f"D{line}"] = "Fail"
+                    sheet[f"D{line}"].font = Font(bold=True, color="00FF6600")
+                    sheet[f"E{line}"].font = Font(bold=True, color="00FF6600")
                 else:
                     sheet[f"D{line}"] = "Fail"
                     sheet[f"D{line}"].font = Font(bold=True, color="00FF0000")
@@ -749,6 +759,8 @@ if __name__ == '__main__':
     # Thresholds
     thresholds = {
         '5G Channel Utilization': 20,   # %
+        '5G Occurances Warning': 10,     # times
+        '5G Occurances Alarm': 50,     # times
         '5G Min TX Power': 10,          # dBm
         '5G Min Bitrate': 12,           # Mbps
         '5G Max Channel Width': 40,     # MHz
