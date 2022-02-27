@@ -405,11 +405,11 @@ async def async_check_network_firmware(aiomeraki: meraki.aio.AsyncDashboardAPI, 
                 if version['releaseType'] == "stable":
                     latest_stable_version = version['shortName']
             if current_version == latest_stable_version:
-                pp(f"[green]{product.upper()} is running the current stable version ({current_version})")
+                pp(f"[green]{network['name']}: {product.upper()} is running the current stable version ({current_version}).")
             elif firmware[product]['nextUpgrade']['time'] != "":
-                pp(f"[green]{product.upper()} is not running the current stable version ({current_version}), but an upgrade is scheduled for {firmware[product]['nextUpgrade']['time']}")
+                pp(f"[green]{network['name']}: {product.upper()} is not running the current stable version ({current_version}), but an upgrade is scheduled for {firmware[product]['nextUpgrade']['time']}")
             else:
-                pp(f"[red]{product.upper()} is not running the current stable version (current: {current_version}, current stable version: {latest_stable_version})")
+                pp(f"[red]{network['name']}: {product.upper()} is not running the current stable version (current: {current_version}, current stable version: {latest_stable_version})")
                 result['is_ok'] = False
             #
             result[product] = {'current_version': current_version, 'latest_stable_version': latest_stable_version, 'scheduled_upgrade': firmware[product]['nextUpgrade']['time']}
@@ -842,8 +842,8 @@ async def main():
         suppress_logging=True, 
         maximum_concurrent_requests=5,
         wait_on_rate_limit=True,
-        nginx_429_retry_wait_time=1,
-        maximum_retries=5
+        nginx_429_retry_wait_time=2,
+        maximum_retries=100
             ) as aiomeraki:
         #
         # Run organization checks
