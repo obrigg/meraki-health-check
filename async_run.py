@@ -906,7 +906,6 @@ async def main():
         pp("Done.")
 
 if __name__ == '__main__':
-    start = time.time()
     # Thresholds
     thresholds = {
         '5G Channel Utilization': 20,   # %
@@ -925,7 +924,8 @@ if __name__ == '__main__':
     # Initializing Meraki SDK
     dashboard = meraki.DashboardAPI(output_log=False, suppress_logging=True)
     org_id, org_name = select_org()
-
+    
+    start = time.time()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
 
