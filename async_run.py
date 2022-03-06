@@ -491,8 +491,9 @@ async def async_check_api_calls (aiomeraki: meraki.aio.AsyncDashboardAPI, org_ad
         results['org_settings']['users'][request['adminId']]['api_calls'] += 1
         if "/v0/" in request['path']:
             results['org_settings']['using_v0'] = True
+            if not results['org_settings']['users'][request['adminId']]['using_v0']:
+                pp(f"[red]Admin {results['org_settings']['users'][request['adminId']]['name']} (email: {results['org_settings']['users'][request['adminId']]['email']}) is using the v0 API")
             results['org_settings']['users'][request['adminId']]['using_v0'] = True
-            pp(f"[red]Admin {results['org_settings']['users'][request['adminId']]['name']} (email: {results['org_settings']['users'][request['adminId']]['email']}) is using the v0 API")
             results['org_settings']['is_ok'] = False
 
 

@@ -409,8 +409,9 @@ def check_org_admins() -> dict:
         result['users'][request['adminId']]['api_calls'] += 1
         if "/v0/" in request['path']:
             result['using_v0'] = True
+            if not result['users'][request['adminId']]['using_v0']:
+                pp(f"[red]Admin {result['users'][request['adminId']]['name']} (email: {result['users'][request['adminId']]['email']}) is using the v0 API")
             result['users'][request['adminId']]['using_v0'] = True
-            pp(f"[red]Admin {result['users'][request['adminId']]['name']} (email: {result['users'][request['adminId']]['email']}) is using the v0 API")
             result['is_ok'] = False
     return (result)
     
