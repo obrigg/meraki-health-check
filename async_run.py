@@ -15,15 +15,11 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Color
 
 
-def return_name(dictionary: dict) -> str:
-    return dictionary['name']
-
-
 def select_org():
     # Fetch and select the organization
     print('\n\nFetching organizations...\n')
     organizations = dashboard.organizations.getOrganizations()
-    organizations.sort(key=return_name)
+    organizations.sort(key=lambda x: x['name'])
     ids = []
     table = Table(title="Meraki Organizations")
     table.add_column("Organization #", justify="left", style="cyan", no_wrap=True)
