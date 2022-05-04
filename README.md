@@ -68,7 +68,7 @@ and install the Meraki SDK via `pip install -r requirements.txt`
 
 Now you're ready. Good luck!
 
-`python run.py`
+`python async_run.py`
 
 ### Known limitations / caveats
 1. The script intentionally ignores the 2.4GHz spectrum, as it is beyond salavion. It can be altered, if needed, in the `check_wifi_channel_utilization` function.
