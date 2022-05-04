@@ -1,4 +1,4 @@
-__version__ = '0.7'
+__version__ = '22.05.04.01'
 __author__ = 'Oren Brigg'
 __author_email__ = 'obrigg@cisco.com'
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
