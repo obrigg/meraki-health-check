@@ -1,5 +1,7 @@
-# Meraki Health Check 
-<img src="img/health_check.png">
+
+<img src="img/meraki_health_check.png">
+
+[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/obrigg/Vanilla-ISE)
 
 ### The Challenge
 
