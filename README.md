@@ -61,10 +61,12 @@ Convinced the health-check is worth 5 minutes of your time? let's do this!
 3. After enabling the API, go to "my profile" on the upper right side of the dashboard to generate an API key. This API key will be associated with the Dashboard Administrator account which generates it, and will inherit the same permissions as that account.  You can generate, revoke, and regenerate your API key on your profile.
 <p align="center"><img src="img/my_profile.png"></p>
 <p align="center"><img src="img/api_access.png"></p>
-**Always keep your API key safe as it provides authentication to all of your organizations with the API enabled. If your API key is shared, you can regenerate your API key at any time. This will revoke the existing API key.**
+
+<span style="color:red">ALWAYS keep your API key safe as it provides authentication to all of your organizations with the API enabled. </span>
+If your API key has been compromised, please, regenerate it through the dashboard. This will revoke the existing API key.
 
 #### Storing the Meraki API Key as an environment variable
-Once the API key is obtained, you'll need to store the Meraki dashboard API key as an environment variable:
+Once the API key is obtained, you'll need to store the Meraki dashboard API key as an environment variable (if not - no worries, the script will ask you to enter your API key):
 `export MERAKI_DASHBOARD_API_KEY = <YOUR MERAKI API KEY>`
 and install the Meraki SDK via `pip install -r requirements.txt`
 
