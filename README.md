@@ -63,16 +63,27 @@ Convinced the health-check is worth 5 minutes of your time? let's do this!
 <p align="center"><img src="img/api_access.png"></p>
 
 <span style="color:red">ALWAYS keep your API key safe as it provides authentication to all of your organizations with the API enabled. </span>
-If your API key has been compromised, please, regenerate it through the dashboard. This will revoke the existing API key.
+If your API key has been compromised - **revoke it immediately** through the dashboard, and generate a new API key.
 
+#### Installing the Meraki Python SDK
+`pip install -r requirements.txt`
 #### Storing the Meraki API Key as an environment variable
-Once the API key is obtained, you'll need to store the Meraki dashboard API key as an environment variable (if not - no worries, the script will ask you to enter your API key):
-`export MERAKI_DASHBOARD_API_KEY = <YOUR MERAKI API KEY>`
-and install the Meraki SDK via `pip install -r requirements.txt`
+You don't have to store the API key, as the script will ask you to enter it. However, it would be more covenient to store it instead of typing each every time.
 
-Now you're ready. Good luck!
+Linux:
+`export MERAKI_DASHBOARD_API_KEY = <YOUR MERAKI API KEY>`
+
+Windows:
+`set MERAKI_DASHBOARD_API_KEY = <YOUR MERAKI API KEY>`
+
+#### And... you're ready. Good luck!
 
 `python async_run.py`
+
+<span style="color:green">Feedback is a gift</span>
+* The script helps? I'd love to hear.
+* You think the script sucks? Let's make it better!
+* Have suggestions to additional **common** problems that should be included? Open an issue, I'd love to hear that too.
 
 ### Known limitations / caveats
 1. The script intentionally ignores the 2.4GHz spectrum, as it is beyond salavion. It can be altered, if needed, in the `check_wifi_channel_utilization` function.
