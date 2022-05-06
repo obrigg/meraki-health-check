@@ -1,4 +1,4 @@
-__version__ = '22.05.04.01'
+__version__ = '22.05.05.01'
 __author__ = 'Oren Brigg'
 __author_email__ = 'obrigg@cisco.com'
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
@@ -8,6 +8,9 @@ import meraki
 import asyncio
 import meraki.aio
 import time
+import os
+import sys
+from getpass import getpass
 from rich import print as pp
 from rich.console import Console
 from rich.table import Table
@@ -18,7 +21,11 @@ from openpyxl.styles import Font, Color
 def select_org():
     # Fetch and select the organization
     print('\n\nFetching organizations...\n')
-    organizations = dashboard.organizations.getOrganizations()
+    try:
+        organizations = dashboard.organizations.getOrganizations()
+    except Exception as e:
+        pp(f"[red]An error has occured: \n\n{e}[/red]\n\nExiting...")
+        sys.exit(1)
     organizations.sort(key=lambda x: x['name'])
     ids = []
     table = Table(title="Meraki Organizations")
@@ -918,6 +925,11 @@ if __name__ == '__main__':
     }
     results = {}
 
+    # Check for an envriomnet variable, if not set, ask for an API key
+    if not os.environ.get('MERAKI_DASHBOARD_API_KEY'):
+        pp("[bold magenta]No API key found. Please enter your Meraki Dashboard API key:")
+        api_key = getpass("Meraki Dashboard API Key: ")
+        os.environ['MERAKI_DASHBOARD_API_KEY'] = api_key
     # Initializing Meraki SDK
     dashboard = meraki.DashboardAPI(output_log=False, suppress_logging=True)
     org_id, org_name = select_org()
