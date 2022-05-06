@@ -63,6 +63,7 @@ Convinced the health-check is worth 5 minutes of your time? let's do this!
 <p align="center"><img src="img/api_access.png"></p>
 
 <span style="color:red">ALWAYS keep your API key safe as it provides authentication to all of your organizations with the API enabled. </span>
+
 If your API key has been compromised - **revoke it immediately** through the dashboard, and generate a new API key.
 
 #### Installing the Meraki Python SDK
@@ -81,6 +82,7 @@ Windows:
 `python async_run.py`
 
 <span style="color:green">Feedback is a gift</span>
+
 * The script helps? I'd love to hear.
 * You think the script sucks? Let's make it better!
 * Have suggestions to additional **common** problems that should be included? Open an issue, I'd love to hear that too.
