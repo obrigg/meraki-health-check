@@ -1,4 +1,4 @@
-__version__ = "22.06.04.01"
+__version__ = "22.06.29.01"
 __author__ = "Oren Brigg"
 __author_email__ = "obrigg@cisco.com"
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
@@ -386,7 +386,7 @@ async def async_check_switches_port_counters(
     results[network["name"]]["port_counters_check"] = {"is_ok": True}
     port_check_task = []
     for device in device_list:
-        if "MS" in device["model"]:
+        if "MS" in device["model"] or "C9" in device["model"]:
             if "name" not in device.keys():
                 device["name"] = device["serial"]
             port_check_task.append(
