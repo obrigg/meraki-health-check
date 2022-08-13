@@ -1,4 +1,4 @@
-__version__ = "22.06.29.01"
+__version__ = "22.08.13.01"
 __author__ = "Oren Brigg"
 __author_email__ = "obrigg@cisco.com"
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
@@ -1183,6 +1183,13 @@ async def main():
         nginx_429_retry_wait_time=2,
         maximum_retries=100,
     ) as aiomeraki:
+        #
+        # Checking the organization has API enabled
+        try:
+            dashboard.organizations.getOrganizationNetworks(org_id)
+        except meraki.APIError as e:
+            pp(f"[red]An error has occured: \n\n{e}[/red]\n\n")
+            sys.exit(1)
         #
         # Run organization checks
         await async_check_org_admins(aiomeraki)
