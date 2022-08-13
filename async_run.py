@@ -25,6 +25,8 @@ def select_org():
         organizations = dashboard.organizations.getOrganizations()
     except Exception as e:
         pp(f"[red]An error has occured: \n\n{e}[/red]\n\nExiting...")
+        pp("A newly generated API key will require up to 15 minutes to synchronize with Meraki API gateways. \
+            \nIf you're using a new key - kindly try again in a few minutes.")
         sys.exit(1)
     organizations.sort(key=lambda x: x["name"])
     ids = []
