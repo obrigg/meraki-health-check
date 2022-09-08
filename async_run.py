@@ -1,20 +1,21 @@
-__version__ = "22.08.13.01"
+__version__ = "22.09.08.01"
 __author__ = "Oren Brigg"
 __author_email__ = "obrigg@cisco.com"
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
 
 
-import meraki
-import asyncio
-import meraki.aio
-import time
 import os
 import sys
+import time
+import meraki
+import asyncio
+import requests
+import meraki.aio
 from getpass import getpass
 from rich import print as pp
-from rich.console import Console
 from rich.table import Table
 from openpyxl import Workbook
+from rich.console import Console
 from openpyxl.styles import Font, Color
 
 
@@ -714,6 +715,38 @@ async def async_check_api_calls(
             results["org_settings"]["is_ok"] = False
 
 
+def check_wireless_ports(headers):
+    url = f"https://api.meraki.com/api/v1/organizations/{org_id}/wireless/devices/ethernet/statuses"
+    try:
+        ap_uplinks = requests.get(url, headers=headers).json()
+    except Exception as e:
+        pp(f"[bold magenta]Some other ERROR: {e}")
+    try:
+        networks = dashboard.organizations.getOrganizationNetworks(org_id)
+    except Exception as e:
+        pp(f"[bold magenta]Some other ERROR: {e}")
+    #
+    for ap in ap_uplinks:
+        # Translating network ID to network name
+        network_id = ap['network']['id']
+        network_name = "N/A"
+        for network in networks:
+            if network['id'] == network_id:
+                network_name = network['name']
+                break
+        # Checking if the AP has 5GHz history, otherwise it won't appear in the results
+        if ap["serial"] in results[network_name]["channel_utilization_check"].keys():
+            # Checking the APs uplink
+            # TODO: Adjust the code for APs with more than one port
+            ap_port = ap['ports'][0]
+            results[network_name]["channel_utilization_check"][ap["serial"]]["speed"] = ap_port['linkNegotiation']['speed']
+            results[network_name]["channel_utilization_check"][ap["serial"]]["duplex"] = ap_port['linkNegotiation']['duplex']
+            if ap_port['linkNegotiation']['speed'] < 1000:
+                results[network_name]["channel_utilization_check"][ap["serial"]]["is_ok"] = False
+            if ap_port['linkNegotiation']['duplex'] == 'half':
+                results[network_name]["channel_utilization_check"][ap["serial"]]["is_ok"] = False
+        
+
 def generate_excel_report(results: dict) -> None:
     print("\n\t\tGenerating an Excel Report...\n")
     ABC = [None, "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"]
@@ -1014,6 +1047,17 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"F{line}"] = results[network]["channel_utilization_check"][ap][
                     "occurances"
                 ]
+                if "speed" in results[network]["channel_utilization_check"][ap].keys():
+                    sheet["G1"] = "Speed"
+                    sheet["H1"] = "Duplex"
+                    speed = results[network]["channel_utilization_check"][ap]["speed"]
+                    sheet[f"G{line}"] = speed
+                    if speed < 1000:
+                        sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
+                    duplex = results[network]["channel_utilization_check"][ap]["duplex"]
+                    sheet[f"H{line}"] = duplex
+                    if duplex == "half":
+                        sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
     #
     # Adding filters
@@ -1274,7 +1318,27 @@ async def main():
         for task in asyncio.as_completed(check_ssid_amount_tasks):
             await task
         # TODO: wireless health
-
+        # 
+        # Early API Access
+        is_early_api_access_enabled = False
+        try:
+            early_access = dashboard.organizations.getOrganizationEarlyAccessFeatures(org_id)
+            for feature in early_access:
+                if feature['shortName'] == 'has_beta_api' and 'isOrgScopedOnly':
+                    is_early_api_access_enabled = True
+            #            
+            if is_early_api_access_enabled:
+                headers = {'Content-Type': 'application/json', 
+                            'Accept': 'application/json', 
+                            'X-Cisco-Meraki-API-Key': api_key}
+                check_wireless_ports(headers)
+        except meraki.exceptions.AsyncAPIError as e:
+            pp(
+                f'[bold magenta]Meraki AIO API Error (OrgID "{ org_id }", OrgName "{ org_name }"): \n { e }'
+            )
+        except Exception as e:
+            pp(f"[bold magenta]Some other ERROR: {e}")
+        #
         pp("\n", 100 * "*", "\n")
         # Results cleanup
         clean_results = {}
@@ -1282,7 +1346,7 @@ async def main():
             if results[result] != {}:
                 clean_results[result] = results[result]
 
-        # pp(clean_results)
+        pp(clean_results)
         generate_excel_report(clean_results)
         pp("Done.")
 
@@ -1304,7 +1368,9 @@ if __name__ == "__main__":
     results = {}
 
     # Check for an envriomnet variable, if not set, ask for an API key
-    if not os.environ.get("MERAKI_DASHBOARD_API_KEY"):
+    if os.environ.get("MERAKI_DASHBOARD_API_KEY"):
+        api_key = os.environ["MERAKI_DASHBOARD_API_KEY"]
+    else:
         pp(
             "[bold magenta]No API key found. Please enter your Meraki Dashboard API key:"
         )
