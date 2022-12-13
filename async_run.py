@@ -1,4 +1,4 @@
-__version__ = "22.09.08.01"
+__version__ = "22.12.13.01"
 __author__ = "Oren Brigg"
 __author_email__ = "obrigg@cisco.com"
 __license__ = "Cisco Sample Code License, Version 1.1 - https://developer.cisco.com/site/license/cisco-sample-code-license/"
@@ -741,9 +741,9 @@ def check_wireless_ports(headers):
             ap_port = ap['ports'][0]
             results[network_name]["channel_utilization_check"][ap["serial"]]["speed"] = ap_port['linkNegotiation']['speed']
             results[network_name]["channel_utilization_check"][ap["serial"]]["duplex"] = ap_port['linkNegotiation']['duplex']
-            if ap_port['linkNegotiation']['speed'] < 1000:
+            if ap_port['linkNegotiation']['speed'] == None or ap_port['linkNegotiation']['speed'] < 1000:
                 results[network_name]["channel_utilization_check"][ap["serial"]]["is_ok"] = False
-            if ap_port['linkNegotiation']['duplex'] == 'half':
+            if ap_port['linkNegotiation']['duplex'] == 'half' or ap_port['linkNegotiation']['duplex'] == None:
                 results[network_name]["channel_utilization_check"][ap["serial"]]["is_ok"] = False
         
 
@@ -1052,11 +1052,13 @@ def generate_excel_report(results: dict) -> None:
                     sheet["H1"] = "Duplex"
                     speed = results[network]["channel_utilization_check"][ap]["speed"]
                     sheet[f"G{line}"] = speed
-                    if speed < 1000:
+                    if speed == None:
+                        sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
+                    elif speed < 1000:
                         sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
                     duplex = results[network]["channel_utilization_check"][ap]["duplex"]
                     sheet[f"H{line}"] = duplex
-                    if duplex == "half":
+                    if duplex != "full":
                         sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
     #
@@ -1228,6 +1230,7 @@ async def main():
         wait_on_rate_limit=True,
         nginx_429_retry_wait_time=2,
         maximum_retries=100,
+        caller='Healthcheck/22.12 OBrigg'
     ) as aiomeraki:
         #
         # Checking the organization has API enabled
@@ -1377,10 +1380,11 @@ if __name__ == "__main__":
         api_key = getpass("Meraki Dashboard API Key: ")
         os.environ["MERAKI_DASHBOARD_API_KEY"] = api_key
     # Initializing Meraki SDK
-    dashboard = meraki.DashboardAPI(output_log=False, suppress_logging=True)
+    dashboard = meraki.DashboardAPI(output_log=False, suppress_logging=True, caller='Healthcheck/22.12 OBrigg')
     org_id, org_name = select_org()
 
     start = time.time()
+    loop = asyncio.new_event_loop()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
 
