@@ -156,7 +156,7 @@ Kindly select the organization ID you would like to query:
 
 Type in `1` and press `Enter`
 
-As a result of the running script, a related report file was created. In the curent case file `DevNet Test Org.xlsx` was created
+As a result of the running script, a related report file was created. In the current case file `DevNet Test Org.xlsx` was created.
 
 Sample Screenshots from the report
 
