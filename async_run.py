@@ -789,7 +789,7 @@ def generate_excel_report(results: dict) -> None:
     ] = "4. Firmware Upgrade - This tab presents the firmware status for every network. Highlighting networks that require a firmware upgrade."
     sheet[
         "B18"
-    ] = "5. RF profiles - This tab presents the (non-default) RF profiles for every network."
+    ] = "5. RF profiles - This tab presents the RF profiles for every network."
     sheet[
         "C19"
     ] = f"Minimum Tx power: Setting the minimum Tx power too high, might result in wireless APs interfering with each other, as they are not allowed to decrease their power. The threshold is set to {thresholds['5G Min TX Power']} dBm."
