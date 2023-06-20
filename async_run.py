@@ -715,18 +715,25 @@ async def async_check_api_calls(
             results["org_settings"]["is_ok"] = False
 
 
-def check_wireless_ports(headers):
-    url = f"https://api.meraki.com/api/v1/organizations/{org_id}/wireless/devices/ethernet/statuses"
-    try:
-        ap_uplinks = requests.get(url, headers=headers).json()
-    except Exception as e:
-        pp(f"[bold magenta]Some other ERROR: {e}")
-    try:
-        networks = dashboard.organizations.getOrganizationNetworks(org_id)
-    except Exception as e:
-        pp(f"[bold magenta]Some other ERROR: {e}")
+def check_wireless_ports(networks: list):
+    # Fetch all APs' ethernet port statuses
+    aggregated_ap_uplinks = []
+    startingAfter = ''
+    isDone = False
+    while not isDone:
+        pp(f"Fetching ethernet ports, received {len(aggregated_ap_uplinks)} ethernet ports so far..")
+        try:
+            ap_uplinks = dashboard.wireless.getOrganizationWirelessDevicesEthernetStatuses(org_id, perPage=1000, startingAfter=startingAfter)
+            aggregated_ap_uplinks += ap_uplinks
+            if len(ap_uplinks) < 1000:
+                isDone = True
+            else:
+                startingAfter = ap_uplinks[999]['serial']
+        except Exception as e:
+            pp(f"[bold magenta]Some other ERROR: {e}")
+            isDone = True
     #
-    for ap in ap_uplinks:
+    for ap in aggregated_ap_uplinks:
         # Translating network ID to network name
         network_id = ap['network']['id']
         network_name = "N/A"
@@ -741,11 +748,15 @@ def check_wireless_ports(headers):
             ap_port = ap['ports'][0]
             results[network_name]["channel_utilization_check"][ap["serial"]]["speed"] = ap_port['linkNegotiation']['speed']
             results[network_name]["channel_utilization_check"][ap["serial"]]["duplex"] = ap_port['linkNegotiation']['duplex']
+            results[network_name]["channel_utilization_check"][ap["serial"]]["power"] = ap['power']['mode']
+            #
             if ap_port['linkNegotiation']['speed'] == None or ap_port['linkNegotiation']['speed'] < 1000:
                 results[network_name]["channel_utilization_check"][ap["serial"]]["is_ok"] = False
             if ap_port['linkNegotiation']['duplex'] == 'half' or ap_port['linkNegotiation']['duplex'] == None:
                 results[network_name]["channel_utilization_check"][ap["serial"]]["is_ok"] = False
-        
+            if ap['power']['mode'] != 'full':
+                results[network_name]["channel_utilization_check"][ap["serial"]]["is_ok"] = False
+      
 
 def generate_excel_report(results: dict) -> None:
     print("\n\t\tGenerating an Excel Report...\n")
@@ -1047,19 +1058,23 @@ def generate_excel_report(results: dict) -> None:
                 sheet[f"F{line}"] = results[network]["channel_utilization_check"][ap][
                     "occurances"
                 ]
-                if "speed" in results[network]["channel_utilization_check"][ap].keys():
-                    sheet["G1"] = "Speed"
-                    sheet["H1"] = "Duplex"
-                    speed = results[network]["channel_utilization_check"][ap]["speed"]
-                    sheet[f"G{line}"] = speed
-                    if speed == None:
-                        sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
-                    elif speed < 1000:
-                        sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
-                    duplex = results[network]["channel_utilization_check"][ap]["duplex"]
-                    sheet[f"H{line}"] = duplex
-                    if duplex != "full":
-                        sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
+                sheet["G1"] = "Speed"
+                sheet["H1"] = "Duplex"
+                sheet["I1"] = "Power"
+                speed = results[network]["channel_utilization_check"][ap]["speed"]
+                sheet[f"G{line}"] = speed
+                if speed == None:
+                    sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
+                elif speed < 1000:
+                    sheet[f"G{line}"].font = Font(bold=True, color="00FF0000")
+                duplex = results[network]["channel_utilization_check"][ap]["duplex"]
+                sheet[f"H{line}"] = duplex
+                if duplex != "full":
+                    sheet[f"H{line}"].font = Font(bold=True, color="00FF0000")
+                power = results[network]["channel_utilization_check"][ap]["power"]
+                sheet[f"I{line}"] = power
+                if power != 'full':
+                    sheet[f"I{line}"].font = Font(bold=True, color="00FF0000")
                 line += 1
     #
     # Adding filters
@@ -1244,7 +1259,7 @@ async def main():
         await async_check_org_admins(aiomeraki)
         # Get networks
         try:
-            networks = await aiomeraki.organizations.getOrganizationNetworks(org_id)
+            networks = await aiomeraki.organizations.getOrganizationNetworks(org_id, perPage=1000, total_pages=20)
         except meraki.exceptions.AsyncAPIError as e:
             pp(
                 f'[bold magenta]Meraki AIO API Error (OrgID "{ org_id }", OrgName "{ org_name }"): \n { e }'
@@ -1320,28 +1335,10 @@ async def main():
         ]
         for task in asyncio.as_completed(check_ssid_amount_tasks):
             await task
+        #
+        check_wireless_ports(networks)
         # TODO: wireless health
         # 
-        # Early API Access
-        is_early_api_access_enabled = False
-        try:
-            early_access = dashboard.organizations.getOrganizationEarlyAccessFeatures(org_id)
-            for feature in early_access:
-                if feature['shortName'] == 'has_beta_api' and 'isOrgScopedOnly':
-                    is_early_api_access_enabled = True
-            #            
-            if is_early_api_access_enabled:
-                headers = {'Content-Type': 'application/json', 
-                            'Accept': 'application/json', 
-                            'X-Cisco-Meraki-API-Key': api_key}
-                check_wireless_ports(headers)
-        except meraki.exceptions.AsyncAPIError as e:
-            pp(
-                f'[bold magenta]Meraki AIO API Error (OrgID "{ org_id }", OrgName "{ org_name }"): \n { e }'
-            )
-        except Exception as e:
-            pp(f"[bold magenta]Some other ERROR: {e}")
-        #
         pp("\n", 100 * "*", "\n")
         # Results cleanup
         clean_results = {}
