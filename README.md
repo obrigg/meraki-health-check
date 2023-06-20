@@ -1,7 +1,7 @@
 
 <img src="img/meraki_health_check.png">
 
-[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/obrigg/Vanilla-ISE)
+[![Run in Cisco Cloud IDE](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-runable-icon.svg)](https://developer.cisco.com/devenv/?id=devenv-vscode-base&GITHUB_SOURCE_REPO=https://github.com/obrigg/meraki-health-check) [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/obrigg/Vanilla-ISE)
 
 ### The Challenge
 
@@ -86,6 +86,78 @@ Windows:
 * The script helps? I'd love to hear.
 * You think the script sucks? Let's make it better!
 * Have suggestions to additional **common** problems that should be included? Open an issue, I'd love to hear that too.
+
+### Run code in Cisco Code Exchange Cloud IDE
+[![Run in Cisco Cloud IDE](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-runable-icon.svg)](https://developer.cisco.com/devenv/?id=devenv-vscode-base&GITHUB_SOURCE_REPO=https://github.com/obrigg/meraki-health-check)
+
+Installing the Meraki Python SDK
+
+`pip install -r requirements.txt`
+
+Set as an environment variable with API KEY for testing
+
+`export MERAKI_DASHBOARD_API_KEY=d03190ff333a3c7feaed89fec5b3b2529f59e8ec`
+
+Run the following command
+
+```bash
+python async_run.py
+```
+
+Expected output
+
+```bash
+Fetching organizations...
+               Meraki Organizations                
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Organization # ┃ Org Name                       ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ 0              │ DeLab                          │
+│ 1              │ DevNet Test Org                │
+│ 2              │ DevNet Test Org                │
+│ 3              │ DevNetAssoc                    │
+│ 4              │ DevRelations                   │
+│ 5              │ DevRelx23                      │
+│ 6              │ Forest City - Other            │
+│ 7              │ GGTEST_MyOrg1                  │
+│ 8              │ Hi Cory                        │
+│ 9              │ Hi Cory                        │
+│ 10             │ Jacks_test_net                 │
+│ 11             │ MARYDALKO_HOME                 │
+│ 12             │ MARYDALKO_HOME                 │
+│ 13             │ MARYDALKO_HOME                 │
+│ 14             │ My Org                         │
+│ 15             │ My organization                │
+│ 16             │ My organization                │
+│ 17             │ My organization                │
+│ 18             │ My organization - clone        │
+│ 19             │ New Meraki Org                 │
+│ 20             │ PM_Test                        │
+│ 21             │ Personal.Lekhnath              │
+│ 22             │ SVR                            │
+│ 23             │ Sample Org                     │
+│ 24             │ TNF - The Network Factory      │
+│ 25             │ Wild Willys Org                │
+│ 26             │ Wils Test Creation             │
+│ 27             │ Wotan                          │
+│ 28             │ Your Organization              │
+│ 29             │ abcdefg                        │
+│ 30             │ changetest                     │
+│ 31             │ gk                             │
+│ 32             │ helloworld                     │
+│ 33             │ organization with name changed │
+│ 34             │ sample_network                 │
+│ 35             │ thienbao                       │
+└────────────────┴────────────────────────────────┘
+Kindly select the organization ID you would like to query:
+```
+Type in `1` and press `Enter`
+As a result of the running script, a related report file was created. In the current case file `DevNet Test Org.xlsx` was created.
+Sample Screenshots from the report
+
+![](img/summary-sample.png)
+![](img/network-firmware-sample.png)
+---
 
 ### Known limitations / caveats
 1. The script intentionally ignores the 2.4GHz spectrum, as it is beyond salavion. It can be altered, if needed, in the `check_wifi_channel_utilization` function.
